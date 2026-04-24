@@ -35,16 +35,16 @@ jobs:
         run: |
           echo "🗑️ Очистка репозитория X..."
 
-          # Защищаем temp-source и .github
-          mv temp-source /tmp/temp-source-backup
-          
-          # Удаляем всё остальное
-          rm -rf ./* ./.??* 2>/dev/null || true
-          
-          # Возвращаем temp-source обратно
-          mv /tmp/temp-source-backup temp-source
+          # 1. Сохраняем .git во временную папку
+          mv .git /tmp/.git-backup
 
-          echo "📋 Копируем файлы..."
+          # 2. Удаляем всё остальное (кроме temp-source)
+          rm -rf ./* ./.??* 2>/dev/null || true
+
+          # 3. Возвращаем .git обратно
+          mv /tmp/.git-backup .git
+
+          echo "📋 Копируем файлы из source..."
           rsync -av --ignore-errors \
                 --exclude='.git' \
                 --exclude='.github' \
@@ -66,4 +66,4 @@ jobs:
 
       - name: Очистка
         if: always()
-        run: rm -rf temp-source /tmp/temp-source-backup 2>/dev/null || true
+        run: rm -rf temp-source /tmp/.git-backup 2>/dev/null || true
