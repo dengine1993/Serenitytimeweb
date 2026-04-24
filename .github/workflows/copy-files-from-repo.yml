@@ -1,0 +1,48 @@
+name: Полная замена файлами из другого репозитория
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: 'Репозиторий-источник (owner/repo, например: JivaTheEI/my-project)'
+        required: true
+        type: string
+      source_branch:
+        description: 'Ветка (по умолчанию main)'
+        required: false
+        default: 'main'
+
+jobs:
+  replace:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout репозитория X
+        uses: actions/checkout@v4
+
+      - name: Клонировать исходный репозиторий
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.source_repo }}
+          ref: ${{ inputs.source_branch }}
+          path: temp-source
+
+      - name: Полная замена всех файлов (удаляет лишнее в X)
+        run: |
+          rsync -av --delete \
+                --exclude='.git' \
+                --exclude='.github' \
+                temp-source/ ./
+
+      - name: Commit и push изменений
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -m "Полная замена содержимым из ${{ inputs.source_repo }} (${{ inputs.source_branch }})" || echo "Нет изменений"
+          git push
+
+      - name: Очистка
+        run: rm -rf temp-source
