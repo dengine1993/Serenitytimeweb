@@ -1,0 +1,112 @@
+project_id = "hvtpfbfawhmkvjtcyaxs"
+
+[functions.subscription-expiry-reminder]
+verify_jwt = false
+
+[functions.auto-comment-post]
+verify_jwt = false
+
+[functions.yookassa-webhook-v2]
+verify_jwt = false
+
+[functions.get-holidays]
+verify_jwt = false
+
+[functions.llm-health]
+verify_jwt = false
+
+[functions.clerk-webhook]
+verify_jwt = false
+
+
+[functions.analyze-drawing]
+verify_jwt = false
+
+[functions.cancel-subscription]
+verify_jwt = true
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.create-payment]
+verify_jwt = true
+
+[functions.delete-user-data]
+verify_jwt = true
+
+[functions.export-user-data]
+verify_jwt = true
+
+[functions.freesound-search]
+verify_jwt = true
+
+[functions.notify-mention]
+verify_jwt = true
+
+[functions.reply-to-jiva]
+verify_jwt = false
+
+
+[functions.save-consent]
+verify_jwt = true
+
+[functions.send-web-push]
+verify_jwt = true
+
+[functions.withdraw-consent]
+verify_jwt = true
+
+[functions.analytics-dashboard]
+verify_jwt = false
+
+[functions.create-first-admin]
+verify_jwt = true
+
+[functions.admin-users]
+verify_jwt = true
+
+[functions.toggle-auto-renew]
+verify_jwt = true
+
+[functions.upgrade-subscription]
+verify_jwt = true
+
+[functions.admin-pricing]
+verify_jwt = true
+
+[functions.s3-presign]
+verify_jwt = false
+
+[functions.analyze-mood-patterns]
+verify_jwt = true
+
+[functions.generate-diary-pdf]
+verify_jwt = false
+
+[functions.reset-daily-limits]
+verify_jwt = false
+
+[functions.admin-logs]
+verify_jwt = false
+
+[functions.admin-payments]
+verify_jwt = false
+
+[functions.admin-ai-usage]
+verify_jwt = false
+
+[functions.admin-database]
+verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.jiva-embeddings-ingest]
+verify_jwt = false
+
+[functions.jiva-embeddings-search]
+verify_jwt = false
+
+[functions.admin-ai-memory]
+verify_jwt = false
+
