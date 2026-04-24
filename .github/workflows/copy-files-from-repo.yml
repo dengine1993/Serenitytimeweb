@@ -32,20 +32,23 @@ jobs:
           fetch-depth: 1
 
       - name: Проверка клонирования
-        run: |
-          echo "✅ temp-source существует ($(find temp-source -type f | wc -l) файлов)"
+        run: echo "✅ Клонировано $(find temp-source -type f | wc -l) файлов"
 
-      - name: Полная очистка X (защищаем temp-source)
+      - name: Полная очистка + замена файлов
         run: |
-          echo "Очищаем репозиторий X..."
+          echo "🗑️ Полная очистка репозитория X..."
+          
+          # Удаляем все tracked файлы кроме .git
+          git rm -rf --ignore-unmatch .
+          
+          # Удаляем оставшиеся untracked файлы/папки (кроме temp-source и .github)
           find . -mindepth 1 -maxdepth 1 \
             ! -name '.git' \
             ! -name '.github' \
             ! -name 'temp-source' \
-            -exec rm -rf {} +
+            -exec rm -rf {} + 2>/dev/null || true
 
-      - name: Копирование файлов
-        run: |
+          echo "📋 Копируем файлы из source..."
           rsync -av --ignore-errors \
                 --exclude='.git' \
                 --exclude='.github' \
@@ -55,13 +58,14 @@ jobs:
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
+          
           git add -A
           if git diff --cached --quiet; then
-            echo "Нет изменений для коммита"
+            echo "Нет изменений"
           else
             git commit -m "Полная замена из ${{ inputs.source_repo }} (${{ inputs.source_branch }})"
             git push
-            echo "✅ Успешно закоммичено и запушено"
+            echo "✅ Успешно заменено и запушено!"
           fi
 
       - name: Очистка
