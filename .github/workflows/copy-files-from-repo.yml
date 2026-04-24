@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       source_branch:
-        description: 'Ветка (обычно main)'
+        description: 'Ветка'
         required: false
         default: 'main'
 
@@ -22,6 +22,14 @@ jobs:
       - name: Checkout репозитория X
         uses: actions/checkout@v4
 
+      - name: 🔍 Диагностика токена и репозитория
+        run: |
+          echo "Проверяем доступ к репозиторию..."
+          echo "Source repo: ${{ inputs.source_repo }}"
+          echo "Branch: ${{ inputs.source_branch }}"
+          curl -I -H "Authorization: token ${{ secrets.GH_PAT }}" \
+               https://api.github.com/repos/${{ inputs.source_repo }}
+
       - name: Клонировать исходный репозиторий
         uses: actions/checkout@v4
         with:
@@ -31,28 +39,26 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 1
 
-      - name: Проверка, что клонирование прошло успешно
+      - name: Проверка результата клонирования
         run: |
-          if [ ! -d "temp-source" ] || [ -z "$(ls -A temp-source 2>/dev/null)" ]; then
-            echo "❌ Ошибка: temp-source не создан или пустой"
+          echo "=== Содержимое текущей папки ==="
+          ls -la
+          echo "=== Содержимое temp-source ==="
+          if [ -d "temp-source" ]; then
+            ls -la temp-source
+            echo "Количество файлов: $(find temp-source -type f | wc -l)"
+          else
+            echo "❌ temp-source НЕ СОЗДАН!"
             exit 1
           fi
-          echo "✅ temp-source успешно клонирован ($(ls temp-source | wc -l) объектов)"
 
-      - name: Полная очистка репозитория X
+      - name: Полная очистка X
         run: |
-          echo "Очищаем всё кроме .git и .github..."
-          find . -mindepth 1 -maxdepth 1 \
-            ! -name '.git' \
-            ! -name '.github' \
-            -exec rm -rf {} +
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' -exec rm -rf {} +
 
-      - name: Копирование файлов из source в X
+      - name: Копирование файлов
         run: |
-          rsync -av --ignore-errors \
-                --exclude='.git' \
-                --exclude='.github' \
-                temp-source/ ./
+          rsync -av --ignore-errors --exclude='.git' --exclude='.github' temp-source/ ./
 
       - name: Commit и push
         run: |
@@ -60,7 +66,7 @@ jobs:
           git config user.email "actions@github.com"
           git add -A
           if git diff --cached --quiet; then
-            echo "Нет изменений для коммита"
+            echo "Нет изменений"
           else
             git commit -m "Полная замена из ${{ inputs.source_repo }} (${{ inputs.source_branch }})"
             git push
