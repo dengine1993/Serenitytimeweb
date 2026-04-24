@@ -19,12 +19,10 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout X (только metadata)
+      - name: Checkout X
         uses: actions/checkout@v4
-        with:
-          sparse-checkout: '.github'   # сначала берём только .github
 
-      - name: Клонировать source-репозиторий
+      - name: Клонировать source
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.source_repo }}
@@ -33,11 +31,13 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 1
 
-      - name: Полная замена
+      - name: Полная очистка и копирование
         run: |
-          echo "🗑️ Удаляем всё кроме .git и .github..."
-          shopt -s extglob
-          rm -rf !(.git|.github|temp-source) 2>/dev/null || true
+          echo "🗑️ Очистка репозитория X..."
+          
+          # Самый безопасный способ — удаляем всё через файловую систему
+          rm -rf ./* ./.??* 2>/dev/null || true
+          rm -rf temp-source/.git 2>/dev/null || true   # на всякий случай
 
           echo "📋 Копируем файлы из source..."
           rsync -av --ignore-errors \
@@ -45,18 +45,23 @@ jobs:
                 --exclude='.github' \
                 temp-source/ ./
 
+      - name: Восстановление .github (чтобы workflow не сломался)
+        run: |
+          mkdir -p .github/workflows
+          cp -r temp-source/.github/workflows/ .github/ 2>/dev/null || true
+
       - name: Commit и push
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           
-          git add -A --all
+          git add -A
           if git diff --cached --quiet; then
             echo "Нет изменений"
           else
             git commit -m "Полная замена из ${{ inputs.source_repo }} (${{ inputs.source_branch }})"
             git push
-            echo "✅ Готово!"
+            echo "✅ Успешно!"
           fi
 
       - name: Очистка
