@@ -1,4 +1,4 @@
-name: Полная замена — очистка X + копирование
+name: Полная замена X ← выбранный репозиторий
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       source_branch:
-        description: 'Ветка'
+        description: 'Ветка (обычно main)'
         required: false
         default: 'main'
 
@@ -29,26 +29,43 @@ jobs:
           ref: ${{ inputs.source_branch }}
           path: temp-source
           token: ${{ secrets.GH_PAT }}
+          fetch-depth: 1
 
-      - name: Полная очистка X (кроме .git и .github)
+      - name: Проверка, что клонирование прошло успешно
         run: |
-          # Удаляем всё, кроме .git и .github
-          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' -exec rm -rf {} +
+          if [ ! -d "temp-source" ] || [ -z "$(ls -A temp-source 2>/dev/null)" ]; then
+            echo "❌ Ошибка: temp-source не создан или пустой"
+            exit 1
+          fi
+          echo "✅ temp-source успешно клонирован ($(ls temp-source | wc -l) объектов)"
 
-      - name: Копирование всех файлов из source в X
+      - name: Полная очистка репозитория X
+        run: |
+          echo "Очищаем всё кроме .git и .github..."
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name '.git' \
+            ! -name '.github' \
+            -exec rm -rf {} +
+
+      - name: Копирование файлов из source в X
         run: |
           rsync -av --ignore-errors \
                 --exclude='.git' \
                 --exclude='.github' \
                 temp-source/ ./
 
-      - name: Commit и push изменений
+      - name: Commit и push
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add -A
-          git commit -m "Полная замена из ${{ inputs.source_repo }} (${{ inputs.source_branch }})" || echo "Нет изменений"
-          git push
+          if git diff --cached --quiet; then
+            echo "Нет изменений для коммита"
+          else
+            git commit -m "Полная замена из ${{ inputs.source_repo }} (${{ inputs.source_branch }})"
+            git push
+          fi
 
       - name: Очистка
+        if: always()
         run: rm -rf temp-source
