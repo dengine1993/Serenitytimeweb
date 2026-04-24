@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       source_branch:
-        description: 'Ветка (по умолчанию main)'
+        description: 'Ветка'
         required: false
         default: 'main'
 
@@ -22,13 +22,13 @@ jobs:
       - name: Checkout репозитория X
         uses: actions/checkout@v4
 
-      - name: Клонировать исходный репозиторий (с поддержкой приватных)
+      - name: Клонировать исходный приватный репозиторий
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.source_repo }}
           ref: ${{ inputs.source_branch }}
           path: temp-source
-          token: ${{ secrets.GITHUB_TOKEN }}   # ← это важно для приватных репозиториев
+          token: ${{ secrets.GH_PAT }}        # ← используем PAT
 
       - name: Полная замена всех файлов
         run: |
@@ -37,12 +37,12 @@ jobs:
                 --exclude='.github' \
                 temp-source/ ./
 
-      - name: Commit и push изменений
+      - name: Commit и push
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add -A
-          git commit -m "Полная замена содержимым из ${{ inputs.source_repo }} (${{ inputs.source_branch }})" || echo "Нет изменений"
+          git commit -m "Полная замена из ${{ inputs.source_repo }} (${{ inputs.source_branch }})" || echo "Нет изменений"
           git push
 
       - name: Очистка
