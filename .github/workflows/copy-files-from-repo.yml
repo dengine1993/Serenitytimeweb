@@ -1,4 +1,4 @@
-name: Полная замена файлами из другого репозитория
+name: Полная замена — очистка X + копирование
 
 on:
   workflow_dispatch:
@@ -22,22 +22,27 @@ jobs:
       - name: Checkout репозитория X
         uses: actions/checkout@v4
 
-      - name: Клонировать исходный приватный репозиторий
+      - name: Клонировать исходный репозиторий
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.source_repo }}
           ref: ${{ inputs.source_branch }}
           path: temp-source
-          token: ${{ secrets.GH_PAT }}        # ← используем PAT
+          token: ${{ secrets.GH_PAT }}
 
-      - name: Полная замена всех файлов
+      - name: Полная очистка X (кроме .git и .github)
         run: |
-          rsync -av --delete \
+          # Удаляем всё, кроме .git и .github
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' -exec rm -rf {} +
+
+      - name: Копирование всех файлов из source в X
+        run: |
+          rsync -av --ignore-errors \
                 --exclude='.git' \
                 --exclude='.github' \
                 temp-source/ ./
 
-      - name: Commit и push
+      - name: Commit и push изменений
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
@@ -47,4 +52,3 @@ jobs:
 
       - name: Очистка
         run: rm -rf temp-source
-        
