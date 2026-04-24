@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       source_repo:
-        description: 'Репозиторий-источник (owner/repo, например: JivaTheEI/my-project)'
+        description: 'Репозиторий-источник (owner/repo)'
         required: true
         type: string
       source_branch:
@@ -22,14 +22,15 @@ jobs:
       - name: Checkout репозитория X
         uses: actions/checkout@v4
 
-      - name: Клонировать исходный репозиторий
+      - name: Клонировать исходный репозиторий (с поддержкой приватных)
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.source_repo }}
           ref: ${{ inputs.source_branch }}
           path: temp-source
+          token: ${{ secrets.GITHUB_TOKEN }}   # ← это важно для приватных репозиториев
 
-      - name: Полная замена всех файлов (удаляет лишнее в X)
+      - name: Полная замена всех файлов
         run: |
           rsync -av --delete \
                 --exclude='.git' \
@@ -46,3 +47,4 @@ jobs:
 
       - name: Очистка
         run: rm -rf temp-source
+        
