@@ -19,10 +19,12 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout репозитория X
+      - name: Checkout X (только metadata)
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: '.github'   # сначала берём только .github
 
-      - name: Клонировать исходный репозиторий
+      - name: Клонировать source-репозиторий
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.source_repo }}
@@ -31,41 +33,30 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 1
 
-      - name: Проверка клонирования
-        run: echo "✅ Клонировано $(find temp-source -type f | wc -l) файлов"
-
-      - name: Полная очистка и замена файлов
+      - name: Полная замена
         run: |
-          echo "🗑️ Полная очистка репозитория X..."
+          echo "🗑️ Удаляем всё кроме .git и .github..."
+          shopt -s extglob
+          rm -rf !(.git|.github|temp-source) 2>/dev/null || true
 
-          # Безопасная очистка через файловую систему (избегаем проблем с submodule)
-          find . -mindepth 1 -maxdepth 1 \
-            ! -name '.git' \
-            ! -name '.github' \
-            ! -name 'temp-source' \
-            -exec rm -rf {} + 2>/dev/null || true
-
-          echo "📋 Копируем все файлы из source..."
+          echo "📋 Копируем файлы из source..."
           rsync -av --ignore-errors \
                 --exclude='.git' \
                 --exclude='.github' \
                 temp-source/ ./
-
-          echo "🧹 Удаляем временные файлы Git (если есть)"
-          rm -rf .git/index.lock 2>/dev/null || true
 
       - name: Commit и push
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           
-          git add -A
+          git add -A --all
           if git diff --cached --quiet; then
             echo "Нет изменений"
           else
             git commit -m "Полная замена из ${{ inputs.source_repo }} (${{ inputs.source_branch }})"
             git push
-            echo "✅ Успешно заменено и запушено!"
+            echo "✅ Готово!"
           fi
 
       - name: Очистка
