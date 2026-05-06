@@ -64,7 +64,7 @@ export const OnboardingWizard = () => {
         setTimeout(() => {
             setAudioUrl("mock-audio-url");
             const capitalizedName = data.name.charAt(0).toUpperCase() + data.name.slice(1).toLowerCase();
-            setScript(capitalizedName + ", я вижу, что сейчас внутри " + data.state.toLowerCase() + ". И это нормально — ты не один с этим чувством.");
+            setScript(capitalizedName + ", я слышу тебя. Внутри сейчас " + data.state.toLowerCase() + " — и это нормально. Ты не один на этом пути. Давай сделаем первый шаг вместе.");
             setCurrentStep(7); // Result
         }, 2000);
     };

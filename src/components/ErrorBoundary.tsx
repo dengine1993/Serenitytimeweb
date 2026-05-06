@@ -78,7 +78,7 @@ export class ErrorBoundary extends Component<Props, State> {
             
             {/* Subtle encouragement */}
             <p className="text-sm text-muted-foreground/70">
-              Если проблема повторяется, напишите нам на support@serenitypeople.ru
+              Если проблема повторяется, напишите нам на info@newdawnjourney.com
             </p>
           </div>
         </div>

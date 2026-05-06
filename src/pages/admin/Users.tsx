@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Search, Ban, CheckCircle, Shield, Eye, Trash2, RefreshCw, Crown, ShieldOff, UserPlus, Plus, Copy, MessageSquareOff } from "lucide-react";
+import { Search, Ban, CheckCircle, Shield, Eye, Trash2, RefreshCw, Crown, ShieldOff, UserPlus, Plus, Copy, MessageSquareOff, Download, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ModerationHistoryPanel } from "@/components/admin/ModerationHistoryPanel";
@@ -79,6 +79,20 @@ export default function AdminUsers() {
   const [deleteAuthUser, setDeleteAuthUser] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Bulk extend premium modal
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [extendHours, setExtendHours] = useState<number>(24);
+  const [extendConfirmed, setExtendConfirmed] = useState(false);
+  const [extendLoading, setExtendLoading] = useState(false);
+
+  // Edit user modal
+  const [editUserTarget, setEditUserTarget] = useState<User | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -124,26 +138,19 @@ export default function AdminUsers() {
         subscriptionsMap[s.user_id] = { status: s.status, end: s.current_period_end };
       });
 
-      // Load posts counts
-      const { data: postsData } = await supabase
-        .from("posts")
-        .select("user_id");
-      
+      // Server-side aggregation of activity counts (no 1000-row client limit).
+      const allUserIds = (profilesData || []).map(p => p.user_id);
       const postsCounts: Record<string, number> = {};
-      postsData?.forEach(p => {
-        postsCounts[p.user_id] = (postsCounts[p.user_id] || 0) + 1;
-      });
-
-      // Load AI messages counts
-      const { data: aiData } = await supabase.from("ai_messages").select("user_id");
-
       const aiCounts: Record<string, number> = {};
-      aiData?.forEach(m => {
-        aiCounts[m.user_id] = (aiCounts[m.user_id] || 0) + 1;
-      });
+      if (allUserIds.length > 0) {
+        const { data: counts } = await supabase.rpc('get_user_activity_counts', { p_user_ids: allUserIds });
+        (counts as Array<{ user_id: string; posts_count: number; ai_messages_count: number }> | null)?.forEach((c) => {
+          postsCounts[c.user_id] = Number(c.posts_count) || 0;
+          aiCounts[c.user_id] = Number(c.ai_messages_count) || 0;
+        });
+      }
 
       // Source of truth for premium: RPC that checks both subscriptions and profiles.premium_until
-      const allUserIds = (profilesData || []).map(p => p.user_id);
       let premiumSet = new Set<string>();
       if (allUserIds.length > 0) {
         const { data: premiumIds } = await supabase.rpc('get_premium_user_ids', { user_ids: allUserIds });
@@ -214,7 +221,11 @@ export default function AdminUsers() {
     setChatHistory([]);
 
     try {
-      // Use edge function to read AI chat history (ai_messages)
+      // 152-FZ: log PII access (read of user's AI chat). Best-effort, non-blocking.
+      supabase.functions.invoke('admin-users', {
+        body: { action: 'log_pii_access', targetUserId: user.user_id, resource: 'chat_history' },
+      }).catch((e) => console.warn('[pii-log] failed:', e));
+
       const { data, error } = await supabase.functions.invoke("admin-ai-usage", {
         body: { mode: "chat", userId: user.user_id },
       });
@@ -308,6 +319,83 @@ export default function AdminUsers() {
     }
   };
 
+  const openEditModal = (user: User) => {
+    setEditUserTarget(user);
+    setEditDisplayName(user.display_name || '');
+    setEditEmail('');
+    setEditPassword('');
+    setShowEditPassword(false);
+  };
+
+  const closeEditModal = () => {
+    if (editLoading) return;
+    setEditUserTarget(null);
+    setEditDisplayName('');
+    setEditEmail('');
+    setEditPassword('');
+    setShowEditPassword(false);
+  };
+
+  const saveEditUser = async () => {
+    if (!editUserTarget) return;
+
+    const body: Record<string, unknown> = {
+      action: 'update_user',
+      userId: editUserTarget.user_id,
+    };
+
+    const trimmedName = editDisplayName.trim();
+    if (trimmedName !== (editUserTarget.display_name || '')) {
+      if (trimmedName.length === 0) {
+        toast.error('Псевдоним не может быть пустым');
+        return;
+      }
+      if (trimmedName.length > 80) {
+        toast.error('Псевдоним не должен превышать 80 символов');
+        return;
+      }
+      body.displayName = trimmedName;
+    }
+
+    const trimmedEmail = editEmail.trim();
+    if (trimmedEmail) {
+      body.email = trimmedEmail;
+    }
+
+    if (editPassword) {
+      if (editPassword.length < 6) {
+        toast.error('Пароль должен быть минимум 6 символов');
+        return;
+      }
+      body.password = editPassword;
+    }
+
+    if (!('displayName' in body) && !('email' in body) && !('password' in body)) {
+      toast.error('Нет изменений для сохранения');
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', { body });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Unknown error');
+
+      toast.success('Пользователь обновлён');
+      setEditUserTarget(null);
+      setEditDisplayName('');
+      setEditEmail('');
+      setEditPassword('');
+      setShowEditPassword(false);
+      loadUsers();
+    } catch (err: any) {
+      console.error('Error updating user:', err);
+      toast.error(err?.message || 'Ошибка обновления');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const isPremium = (user: User) => user.is_premium_flag;
 
   const isRestricted = (user: User) => {
@@ -329,116 +417,33 @@ export default function AdminUsers() {
 
   const applyModerationAction = async () => {
     if (!moderationUser) return;
-    
     setIsApplyingAction(true);
-    
     try {
-      const { data: { user: moderator } } = await supabase.auth.getUser();
-      const targetUserId = moderationUser.user_id;
-      
-      let updateData: Record<string, unknown> = {};
-      let actionType = selectedAction;
-      let notificationTitle = '';
-      let notificationMessage = '';
-      
-      switch (selectedAction) {
-        case 'warning':
-          updateData = {
-            community_warnings_count: (moderationUser.community_warnings_count || 0) + 1,
-            last_community_warning_at: new Date().toISOString()
-          };
-          notificationTitle = 'Предупреждение';
-          notificationMessage = `Вы получили предупреждение за нарушение правил сообщества. ${moderationReason ? `Причина: ${moderationReason}` : 'При повторных нарушениях доступ к сообществу будет ограничен.'}`;
-          break;
-          
-        case 'temp_ban_24h':
-        case 'temp_ban_3d':
-        case 'temp_ban_7d': {
-          const hours = getBanDuration(selectedAction);
-          if (!hours) break;
-          
-          const restrictUntil = new Date();
-          restrictUntil.setHours(restrictUntil.getHours() + hours);
-          
-          updateData = {
-            community_restricted_until: restrictUntil.toISOString(),
-            temp_bans_count: (moderationUser.temp_bans_count || 0) + 1
-          };
-          
-          const durationLabel = hours === 24 ? '24 часа' : hours === 72 ? '3 дня' : '7 дней';
-          notificationTitle = 'Временное ограничение';
-          notificationMessage = `Доступ к функциям сообщества ограничен на ${durationLabel}. ${moderationReason ? `Причина: ${moderationReason}` : 'При повторных нарушениях аккаунт будет заблокирован.'}`;
-          break;
-        }
-          
-        case 'permanent_ban':
-          updateData = {
-            blocked_at: new Date().toISOString()
-          };
-          notificationTitle = 'Аккаунт заблокирован';
-          notificationMessage = `Ваш аккаунт заблокирован за грубое нарушение правил сообщества. ${moderationReason ? `Причина: ${moderationReason}` : ''}`;
-          break;
+      const { data, error } = await supabase.functions.invoke('admin-moderation', {
+        body: {
+          mode: 'apply_user_action',
+          userId: moderationUser.user_id,
+          action: selectedAction,
+          reason: moderationReason || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-        case 'restriction_lifted':
-          updateData = {
-            community_restricted_until: null,
-            blocked_at: null
-          };
-          notificationTitle = 'Ограничения сняты';
-          notificationMessage = 'Ограничения вашего аккаунта были сняты.';
-          break;
-      }
-      
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('user_id', targetUserId);
-      
-      if (updateError) throw updateError;
-      
-      // Create notification for user
-      await supabase.from('notifications').insert({
-        user_id: targetUserId,
-        type: 'moderation',
-        title: notificationTitle,
-        message: notificationMessage
-      });
-      
-      // Log in moderation_history
-      await supabase.from('moderation_history').insert({
-        user_id: targetUserId,
-        moderator_id: moderator?.id,
-        action_type: actionType,
-        reason: moderationReason || null,
-        content_type: null,
-        content_preview: null
-      });
-      
-      // Log admin action
-      await supabase.from('admin_logs').insert({
-        admin_id: moderator?.id,
-        action: actionType,
-        target_type: 'user',
-        target_id: targetUserId,
-        details: { reason: moderationReason }
-      });
-      
       const actionLabels: Record<ModerationActionType, string> = {
         warning: 'Предупреждение выдано',
         temp_ban_24h: 'Бан на 24 часа применён',
         temp_ban_3d: 'Бан на 3 дня применён',
         temp_ban_7d: 'Бан на 7 дней применён',
         permanent_ban: 'Вечный бан применён',
-        restriction_lifted: 'Ограничения сняты'
+        restriction_lifted: 'Ограничения сняты',
       };
-      
       toast.success(actionLabels[selectedAction]);
       closeModerationModal();
       loadUsers();
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error applying moderation action:", error);
-      toast.error("Ошибка применения действия");
+      toast.error(error?.message || "Ошибка применения действия");
     } finally {
       setIsApplyingAction(false);
     }
@@ -446,69 +451,17 @@ export default function AdminUsers() {
 
   const togglePremium = async (user: User) => {
     try {
-      const { data: { user: admin } } = await supabase.auth.getUser();
-      
-      const isPremiumNow = isPremium(user);
-      const now = new Date();
-      const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-      const { data: existingSub } = await supabase
-        .from('subscriptions')
-        .select('id')
-        .eq('user_id', user.user_id)
-        .eq('plan', 'premium')
-        .maybeSingle();
-
-      if (isPremiumNow) {
-        if (existingSub) {
-          const { error } = await supabase
-            .from('subscriptions')
-            .update({ 
-              status: 'canceled',
-              current_period_end: now.toISOString()
-            })
-            .eq('id', existingSub.id);
-          if (error) throw error;
-        }
-      } else {
-        if (existingSub) {
-          const { error } = await supabase
-            .from('subscriptions')
-            .update({ 
-              status: 'active',
-              current_period_start: now.toISOString(),
-              current_period_end: thirtyDaysLater.toISOString()
-            })
-            .eq('id', existingSub.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('subscriptions')
-            .insert({ 
-              user_id: user.user_id,
-              plan: 'premium',
-              status: 'active',
-              current_period_start: now.toISOString(),
-              current_period_end: thirtyDaysLater.toISOString(),
-              payment_provider: 'admin_manual'
-            });
-          if (error) throw error;
-        }
-      }
-
-      await supabase.from("admin_logs").insert({
-        admin_id: admin?.id,
-        action: isPremiumNow ? "remove_premium" : "add_premium",
-        target_type: "user",
-        target_id: user.user_id,
-        details: { premium_until: isPremiumNow ? null : thirtyDaysLater.toISOString() }
+      const enable = !isPremium(user);
+      const { data, error } = await supabase.functions.invoke('admin-moderation', {
+        body: { mode: 'toggle_premium', userId: user.user_id, enable },
       });
-
-      toast.success(isPremiumNow ? "Premium отключён" : "Premium включён на 30 дней");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(enable ? "Premium включён на 30 дней" : "Premium отключён");
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error toggling premium:", error);
-      toast.error("Ошибка изменения Premium");
+      toast.error(error?.message || "Ошибка изменения Premium");
     }
   };
 
@@ -517,28 +470,22 @@ export default function AdminUsers() {
       toast.error("Только админы могут управлять ролями");
       return;
     }
-
     try {
-      const { data: { user: admin } } = await supabase.auth.getUser();
-
-      if (user.role === 'admin') {
-        await supabase.from("user_roles").delete().eq("user_id", user.user_id).eq("role", "admin");
-      } else {
-        await supabase.from("user_roles").upsert({ user_id: user.user_id, role: "admin" });
-      }
-
-      await supabase.from("admin_logs").insert({
-        admin_id: admin?.id,
-        action: user.role === 'admin' ? "remove_admin" : "add_admin",
-        target_type: "user",
-        target_id: user.user_id,
+      const isCurrent = user.role === 'admin';
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: isCurrent ? 'revoke_role' : 'assign_role',
+          userId: user.user_id,
+          role: 'admin',
+        },
       });
-
-      toast.success(user.role === 'admin' ? "Роль админа снята" : "Роль админа назначена");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(isCurrent ? "Роль админа снята" : "Роль админа назначена");
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error toggling admin:", error);
-      toast.error("Ошибка изменения роли");
+      toast.error(error?.message || "Ошибка изменения роли");
     }
   };
 
@@ -547,40 +494,103 @@ export default function AdminUsers() {
       toast.error("Только админы могут назначать модераторов");
       return;
     }
-
     try {
-      const { data: { user: admin } } = await supabase.auth.getUser();
-
-      if (user.role === 'moderator') {
-        await supabase.from("user_roles").delete().eq("user_id", user.user_id).eq("role", "moderator");
-      } else {
-        await supabase.from("user_roles").upsert({ user_id: user.user_id, role: "moderator" });
-      }
-
-      await supabase.from("admin_logs").insert({
-        admin_id: admin?.id,
-        action: user.role === 'moderator' ? "remove_moderator" : "add_moderator",
-        target_type: "user",
-        target_id: user.user_id,
+      const isCurrent = user.role === 'moderator';
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: isCurrent ? 'revoke_role' : 'assign_role',
+          userId: user.user_id,
+          role: 'moderator',
+        },
       });
-
-      toast.success(user.role === 'moderator' ? "Роль модератора снята" : "Модератор назначен");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(isCurrent ? "Роль модератора снята" : "Модератор назначен");
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error toggling moderator:", error);
-      toast.error("Ошибка изменения роли");
+      toast.error(error?.message || "Ошибка изменения роли");
     }
   };
 
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
-        return <Badge className="bg-purple-500/20 text-purple-400">Admin</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400">Админ</Badge>;
       case 'moderator':
-        return <Badge className="bg-blue-500/20 text-blue-400">Mod</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400">Модератор</Badge>;
       default:
-        return <Badge variant="secondary">User</Badge>;
+        return <Badge variant="secondary">Пользователь</Badge>;
     }
+  };
+
+  const handleExtendAllPremium = async () => {
+    if (!Number.isInteger(extendHours) || extendHours < 1 || extendHours > 8760) {
+      toast.error("Часы должны быть целым числом от 1 до 8760");
+      return;
+    }
+    if (!extendConfirmed) {
+      toast.error("Подтвердите действие");
+      return;
+    }
+    setExtendLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'extend_all_premium', hours: extendHours },
+      });
+      if (error) throw error;
+      const affected = (data as { affected?: number })?.affected ?? 0;
+      toast.success(`Продлено подписок: ${affected}`);
+      setShowExtendModal(false);
+      setExtendConfirmed(false);
+      loadUsers();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Ошибка продления';
+      toast.error(msg);
+    } finally {
+      setExtendLoading(false);
+    }
+  };
+
+  const exportUsersCSV = () => {
+    if (filteredUsers.length === 0) {
+      toast.error("Нет данных для экспорта");
+      return;
+    }
+    const escape = (v: unknown): string => {
+      if (v == null) return "";
+      const s = String(v);
+      if (/[",\n\r;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const headers = ["user_id", "display_name", "username", "created_at", "role", "plan", "is_premium", "blocked", "warnings", "posts_count", "ai_messages_count"];
+    const lines = [headers.join(",")];
+    for (const u of filteredUsers) {
+      lines.push([
+        u.user_id,
+        u.display_name ?? "",
+        u.username ?? "",
+        u.created_at,
+        u.role,
+        u.subscription_status ?? "free",
+        isPremium(u) ? "yes" : "no",
+        u.blocked_at ? "yes" : "no",
+        u.community_warnings_count,
+        u.posts_count,
+        u.ai_messages_count,
+      ].map(escape).join(","));
+    }
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `users_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast.success(`Экспортировано: ${filteredUsers.length}`);
+    // Audit log (152-FZ): bulk PII export.
+    supabase.functions.invoke('admin-users', {
+      body: { action: 'log_pii_access', targetUserId: '00000000-0000-0000-0000-000000000000', resource: 'export_csv', details: { count: filteredUsers.length } },
+    }).catch(() => {});
   };
 
   const getStatusBadge = (user: User) => {
@@ -644,15 +654,30 @@ export default function AdminUsers() {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" size="icon" onClick={loadUsers} disabled={loading}>
+            <Button variant="outline" size="icon" onClick={loadUsers} disabled={loading} aria-label="Обновить список пользователей">
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
 
+            <Button variant="outline" onClick={exportUsersCSV} disabled={loading || filteredUsers.length === 0} aria-label="Экспортировать в CSV">
+              <Download className="h-4 w-4 mr-2" />
+              CSV
+            </Button>
+
             {isAdmin && (
-              <Button onClick={() => setShowCreateModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Создать
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => { setExtendConfirmed(false); setShowExtendModal(true); }}
+                  aria-label="Продлить премиум всем"
+                >
+                  <Crown className="h-4 w-4 mr-2 text-amber-400" />
+                  Продлить премиум
+                </Button>
+                <Button onClick={() => setShowCreateModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Создать
+                </Button>
+              </>
             )}
           </div>
         </CardContent>
@@ -669,7 +694,7 @@ export default function AdminUsers() {
                 <TableHead>Посты</TableHead>
                 <TableHead>AI</TableHead>
                 <TableHead>Статус</TableHead>
-                <TableHead>Plan</TableHead>
+                <TableHead>Тариф</TableHead>
                 <TableHead>Роль</TableHead>
                 <TableHead className="text-right">Действия</TableHead>
               </TableRow>
@@ -738,6 +763,14 @@ export default function AdminUsers() {
                       </Button>
                       {isAdmin && (
                         <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(user)}
+                            title="Редактировать (имя / email / пароль)"
+                          >
+                            <Pencil className="h-4 w-4 text-cyan-400" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1030,6 +1063,138 @@ export default function AdminUsers() {
               disabled={deleteLoading}
             >
               {deleteLoading ? 'Удаление...' : 'Удалить'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Bulk extend premium modal */}
+      <Dialog open={showExtendModal} onOpenChange={(open) => { if (!extendLoading) { setShowExtendModal(open); if (!open) setExtendConfirmed(false); } }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-amber-400" />
+              Продлить премиум всем
+            </DialogTitle>
+            <DialogDescription>
+              Будут продлены все активные премиум-подписки на указанное число часов.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="extendHours">Часы для продления (1–8760)</Label>
+              <Input
+                id="extendHours"
+                type="number"
+                min={1}
+                max={8760}
+                step={1}
+                value={extendHours}
+                onChange={(e) => setExtendHours(parseInt(e.target.value, 10) || 0)}
+                disabled={extendLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Например: 24 — на сутки, 168 — на неделю, 720 — на месяц.
+              </p>
+            </div>
+
+            <div className="flex items-start space-x-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <Checkbox
+                id="extendConfirm"
+                checked={extendConfirmed}
+                onCheckedChange={(checked) => setExtendConfirmed(checked === true)}
+                disabled={extendLoading}
+              />
+              <Label htmlFor="extendConfirm" className="font-medium cursor-pointer leading-snug">
+                Я понимаю, что действие затронет всех премиум-пользователей
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExtendModal(false)} disabled={extendLoading}>
+              Отмена
+            </Button>
+            <Button onClick={handleExtendAllPremium} disabled={extendLoading || !extendConfirmed}>
+              {extendLoading ? 'Продление...' : 'Продлить'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit user modal */}
+      <Dialog open={!!editUserTarget} onOpenChange={(open) => { if (!open) closeEditModal(); }}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-cyan-400" />
+              Редактировать пользователя
+            </DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">
+                {editUserTarget?.display_name || editUserTarget?.username || editUserTarget?.user_id}
+              </span>
+              <span className="block text-xs text-muted-foreground mt-1">
+                Email и пароль меняются мгновенно, без письма пользователю. Заполните только то, что нужно изменить.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editDisplayName">Псевдоним</Label>
+              <Input
+                id="editDisplayName"
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                placeholder="Имя пользователя"
+                maxLength={80}
+                disabled={editLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editEmail">Новый email</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="Оставьте пустым, чтобы не менять"
+                disabled={editLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editPassword">Новый пароль</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="editPassword"
+                  type={showEditPassword ? 'text' : 'password'}
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder="Минимум 6 символов; пусто — не менять"
+                  disabled={editLoading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowEditPassword((v) => !v)}
+                  disabled={editLoading}
+                >
+                  {showEditPassword ? 'Скрыть' : 'Показать'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditModal} disabled={editLoading}>
+              Отмена
+            </Button>
+            <Button onClick={saveEditUser} disabled={editLoading}>
+              {editLoading ? 'Сохранение...' : 'Сохранить'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -10,9 +10,11 @@ import SEO from "@/components/SEO";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { HomeFeed } from "@/components/home/HomeFeed";
 import { JivaHeroCard } from "@/components/home/JivaHeroCard";
-import { QuickActionsGrid } from "@/components/home/QuickActionsGrid";
 import { EnhancedStreakWidget } from "@/components/home/EnhancedStreakWidget";
 import { QuickMoodEntry } from "@/components/diary/QuickMoodEntry";
+import { StoriesStrip } from "@/components/home/StoriesStrip";
+import { useMoodEntries } from "@/hooks/useMoodEntries";
+
 
 import { HomeSkeleton } from "@/components/home/HomeSkeleton";
 
@@ -30,6 +32,8 @@ export default function Home() {
   const { user } = useAuth();
   const { t } = useI18n();
   const { isPremium } = usePremiumStatus();
+  const { stats } = useMoodEntries();
+  const hasStreak = stats.streak > 0;
   
   // Fixed dark theme - toggle removed from UI
   const theme = 'dark' as const;
@@ -54,15 +58,22 @@ export default function Home() {
     placeholderData: { display_name: null, username: null, avatar_url: null, timezone: null, last_daily_reset: null },
   });
 
-  const userName = profileData?.display_name || profileData?.username || "Друг";
+  const rawName = profileData?.display_name || profileData?.username || "";
+  // Фолбек: короткие имена (1-2 символа) выглядят странно в приветствии — заменяем на «Друг»
+  const userName = rawName.trim().length >= 3 ? rawName : "Друг";
   const avatarUrl = profileData?.avatar_url || undefined;
 
   useEffect(() => {
-    const tourCompleted = localStorage.getItem('app_tour_completed');
-    if (!tourCompleted) {
+    const localFlag = localStorage.getItem('app_tour_completed');
+    const metaFlag = (user?.user_metadata as any)?.app_tour_completed;
+    if (metaFlag && !localFlag) {
+      // Mirror to localStorage so subsequent renders don't even need to read metadata
+      localStorage.setItem('app_tour_completed', 'true');
+    }
+    if (!localFlag && !metaFlag) {
       setShowTour(true);
     }
-  }, []);
+  }, [user]);
 
   // Check for daily limit reset at 7:00 AM local time
   useEffect(() => {
@@ -109,7 +120,7 @@ export default function Home() {
       
       <HomeParticles />
 
-      <div className="min-h-screen pb-24 md:pb-8 relative transition-colors duration-500 bg-gradient-to-br from-[#080A10] via-[#0d1020] to-[#0f1225]">
+      <div className="min-h-screen pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8 relative transition-colors duration-500 bg-sunrise-ambient">
         <div className="max-w-7xl mx-auto relative z-10">
           <HomeHeader 
             userName={userName}
@@ -119,39 +130,45 @@ export default function Home() {
 
           {/* Jiva Hero — герой главной */}
           <div className="px-4 sm:px-6 mb-3 sm:mb-4">
-            <JivaHeroCard />
+            <JivaHeroCard isPremium={isPremium} />
           </div>
 
+          {/* Stories — горизонтальная лента, прямой доступ к чужим и своей истории */}
+          <StoriesStrip />
+
           <div className="px-4 sm:px-6">
-            {/* Mobile-first: Single column with prioritized content */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
-              
-              {/* Sidebar on desktop, inline on mobile */}
-              <aside 
-                className="lg:col-span-4 lg:order-2 lg:sticky lg:top-4 space-y-3 relative"
-                aria-label="Инструменты"
-              >
-                {/* Quick Actions - 2x3 grid */}
-                <QuickActionsGrid />
 
-                {/* Quick Mood Entry */}
+              {/* Quick Mood — первый блок на мобиле, в сайдбаре на desktop */}
+              <div className="lg:col-span-4 lg:order-2 lg:hidden">
                 <QuickMoodEntry compact />
+              </div>
 
-                {/* Streak Widget */}
-                <EnhancedStreakWidget />
-
-                {/* Premium Status/CTA Card */}
-                {isPremium ? <PremiumStatusBanner /> : <PremiumCTACard />}
-              </aside>
-
-              {/* Main Content - Feed (Glimmers) */}
-              <div 
+              {/* Main Content - Feed (Little Sunrises) */}
+              <div
                 className="lg:col-span-8 lg:order-1"
                 role="main"
                 aria-label="Лента сообщений"
               >
                 <HomeFeed />
               </div>
+
+              {/* Sidebar (desktop) / нижние блоки (mobile) */}
+              <aside
+                className="lg:col-span-4 lg:order-2 lg:sticky lg:top-4 space-y-3 relative"
+                aria-label="Инструменты"
+              >
+                {/* Quick Mood — desktop only тут */}
+                <div className="hidden lg:block">
+                  <QuickMoodEntry compact />
+                </div>
+
+                {/* Streak Widget — показываем только если есть стрик */}
+                {hasStreak && <EnhancedStreakWidget />}
+
+                {/* Premium Status/CTA Card */}
+                {isPremium ? <PremiumStatusBanner /> : <PremiumCTACard />}
+              </aside>
             </div>
           </div>
         </div>

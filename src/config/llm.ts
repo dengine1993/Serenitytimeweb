@@ -34,8 +34,8 @@ export const llmConfig: LLMConfig = {
   polzaApiKey: getEnv('VITE_POLZA_API_KEY', ''),
   lovableApiKey: getEnv('VITE_LOVABLE_API_KEY', ''),
   models: {
-    jivaPrimary: getEnv('VITE_LLM_MODEL_JIVA_PRIMARY', 'anthropic/claude-3-7-sonnet'),
-    jivaFallback: getEnv('VITE_LLM_MODEL_JIVA_FALLBACK', 'openai/gpt-4o-mini'),
+    jivaPrimary: getEnv('VITE_LLM_MODEL_JIVA_PRIMARY', 'anthropic/claude-sonnet-4.6'),
+    jivaFallback: getEnv('VITE_LLM_MODEL_JIVA_FALLBACK', 'anthropic/claude-sonnet-4.6'),
     embedding: getEnv('VITE_EMBEDDING_MODEL', 'openai/text-embedding-3-large'),
   },
   defaults: {

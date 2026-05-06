@@ -130,7 +130,7 @@ export function ConsentManagement() {
             <ExternalLink className="w-4 h-4 text-muted-foreground" />
           </Link>
           <Link to="/legal/disclaimer" className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-            <span className="text-sm text-foreground">{isRu ? 'Отказ от ответственности' : 'Disclaimer'}</span>
+            <span className="text-sm text-foreground">{isRu ? 'Условия использования сервиса' : 'Terms of Use'}</span>
             <ExternalLink className="w-4 h-4 text-muted-foreground" />
           </Link>
         </div>
@@ -235,8 +235,8 @@ export function ConsentManagement() {
                 </p>
                 <ul className="list-disc pl-4 text-sm">
                   <li>{isRu ? 'Ваш аккаунт' : 'Your account'}</li>
-                  <li>{isRu ? 'История дневника и записи СМЭР' : 'Diary and SMER entries'}</li>
-                  <li>{isRu ? 'Рисунки арт-терапии' : 'Art therapy drawings'}</li>
+                  <li>{isRu ? 'История дневника настроения' : 'Mood diary entries'}</li>
+                  <li>{isRu ? 'Рисунки «Образ дня»' : 'Mood Sketch drawings'}</li>
                   <li>{isRu ? 'История чатов с AI' : 'AI chat history'}</li>
                   <li>{isRu ? 'Все персональные данные' : 'All personal data'}</li>
                 </ul>

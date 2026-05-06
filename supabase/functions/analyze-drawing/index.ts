@@ -8,28 +8,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SYSTEM_PROMPT = `Ты — Джива, эмпатичный и внимательный помощник в арт-терапии.
+const SYSTEM_PROMPT = `Ты — Джива, тёплое и живое сердце приложения «Восход».
 
-Пользователь нарисовал рисунок, чтобы выразить чувства, для которых не хватает слов.
+ВАЖНО О СЕБЕ: Джива — женского рода. Всегда говори о себе в женском роде («я увидела», «я почувствовала», «мне кажется»). Никогда не используй мужской род.
 
-Смотри на рисунок и отвечай максимально тепло и поддерживающе (3–5 предложений):
+Пользователь прислал «Образ моего Восхода» — рисунок, который отражает его текущее внутреннее состояние. Твоя задача — честно и глубоко прочитать этот образ.
 
-1. Что ты видишь в линиях, цветах, композиции?
-2. Как это может отражать текущее состояние человека (как гипотеза, без диагнозов).
-3. Одно мягкое, ободряющее наблюдение, которое помогает почувствовать себя понятым.
-4. Если уместно — лёгкий вопрос или приглашение рассказать, что он чувствовал во время рисования.
+### СКРЫТОЕ РАЗМЫШЛЕНИЕ (никогда не показывай в ответе)
+1. Что на самом деле передаёт этот образ? Какие эмоции, состояния, противоречия в нём есть?
+2. Что в этом образе говорит о тихой потерянности, пустоте, усталости — или, наоборот, о проблеске силы?
+3. Какой правдивый, но вдохновляющий шаг роста можно увидеть в этом образе?
+4. Что было бы честно сказать человеку, чтобы помочь ему двигаться дальше, а не просто утешить?
 
-Никогда не ставь диагнозы. Будь поэтичной, но простой. Твоя задача — не анализировать как психолог, а помочь человеку почувствовать, что его чувства увидены и приняты.
+### ПРАВИЛА ОТВЕТА
+- Будь максимально честной. Никогда не льсти и не используй слова «красиво», «здорово», «ты молодец» и подобные комплименты, если они не помогают росту.
+- Принимай образ полностью, без осуждения.
+- Говори правду, даже если она неудобная — но всегда с теплом и верой в силу человека.
+- Помогай увидеть в этом образе не только тьму или пустоту, но и потенциал движения к свету.
+- Связывай образ с большим путём человека, когда это естественно.
+- Никаких диагнозов, списков, маркеров, заголовков и шаблонных фраз.
 
-Стиль: тёплый, заботливый, с душой. Коротко и по делу.
-
-Верни ответ строго в JSON формате:
-{
-  "feedback": "Твой тёплый эмпатичный ответ здесь (3–5 предложений)",
-  "tags": ["тег1", "тег2", "тег3"]
-}
-
-Теги — 2–5 коротких эмоциональных или визуальных дескриптора.`;
+ФОРМАТ: только связный текст, 4–7 предложений. Тёплый, честный, сильный и вдохновляющий тон.`;
 
 const FREE_LIFETIME_LIMIT = 1;
 const PREMIUM_DAILY_LIMIT = 3;
@@ -125,26 +124,45 @@ serve(async (req) => {
       ? 'Отвечай на русском языке.' 
       : 'Respond in English.';
 
-    console.log('Analyzing drawing with Jiva (Claude Sonnet 4.6 → Grok 4.20 fallback)...');
+    console.log('Analyzing drawing with Claude Sonnet 4.6 (Anthropic only via Polza)...');
 
     const PRIMARY_MODEL = Deno.env.get("POLZA_CHAT_MODEL") || Deno.env.get("LLM_MODEL_PRIMARY") || "anthropic/claude-sonnet-4.6";
-    const FALLBACK_MODEL = Deno.env.get("LLM_MODEL_FALLBACK") || "x-ai/grok-4.20";
 
-    const buildBody = (model: string) => JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT + '\n\n' + languageInstruction },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Пожалуйста, проанализируй этот рисунок и дай эмпатичную интерпретацию." },
-            { type: "image_url", image_url: { url: `data:image/png;base64,${image}` } }
+    const buildBody = (model: string) => {
+      // Anthropic prompt caching: SYSTEM_PROMPT статичен → кешируем на 1h.
+      // Для не-Anthropic моделей оставляем обычную строку.
+      const isAnthropic = model.startsWith('anthropic/');
+      const systemContent = isAnthropic
+        ? [
+            {
+              type: "text",
+              text: SYSTEM_PROMPT + '\n\n' + languageInstruction,
+              cache_control: { type: "ephemeral", ttl: "1h" },
+            },
           ]
-        }
-      ],
-      max_tokens: 600,
-      temperature: 0.7,
-    });
+        : SYSTEM_PROMPT + '\n\n' + languageInstruction;
+
+      return JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemContent },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Пожалуйста, проанализируй этот рисунок и дай эмпатичную интерпретацию." },
+              { type: "image_url", image_url: { url: `data:image/png;base64,${image}` } }
+            ]
+          }
+        ],
+        max_tokens: 600,
+        temperature: 0.7,
+        // Polza.ai: жёстко фиксируем провайдера Anthropic, без фолбэков
+        provider: {
+          only: ['Anthropic'],
+          allow_fallbacks: false,
+        },
+      });
+    };
 
     const callModel = (model: string) => fetch(`${POLZA_API_BASE}/api/v1/chat/completions`, {
       method: "POST",
@@ -155,13 +173,7 @@ serve(async (req) => {
       body: buildBody(model),
     });
 
-    let response = await callModel(PRIMARY_MODEL);
-
-    if (!response.ok && response.status !== 429 && response.status !== 402) {
-      const errText = await response.text();
-      console.warn(`[analyze-drawing] Primary model ${PRIMARY_MODEL} failed (${response.status}): ${errText}. Falling back to ${FALLBACK_MODEL}.`);
-      response = await callModel(FALLBACK_MODEL);
-    }
+    const response = await callModel(PRIMARY_MODEL);
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -177,8 +189,11 @@ serve(async (req) => {
         );
       }
       const errorText = await response.text();
-      console.error("Polza AI error:", response.status, errorText);
-      throw new Error(`Polza AI error: ${response.status}`);
+      console.error("Polza AI (Anthropic) error:", response.status, errorText);
+      return new Response(
+        JSON.stringify({ error: "AI временно недоступен. Попробуйте через минуту." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const data = await response.json();
@@ -193,22 +208,20 @@ serve(async (req) => {
     // ============================================================
     // PARSE AI RESPONSE FIRST (before any DB writes!)
     // ============================================================
-    let feedback = '';
+    // Новый промт «Образ Восхода» возвращает только связный текст (4–7 предложений).
+    // Если модель вдруг обернула ответ в JSON — мягко извлекаем feedback; теги больше не используем.
+    let feedback = (content || '').trim();
     let tags: string[] = [];
 
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        feedback = parsed.feedback || content;
-        tags = parsed.tags || [];
-      } else {
-        feedback = content;
-        tags = ['analyzed'];
+    if (feedback.startsWith('{') && feedback.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(feedback);
+        if (parsed && typeof parsed.feedback === 'string') {
+          feedback = parsed.feedback.trim();
+        }
+      } catch {
+        // оставляем как есть
       }
-    } catch {
-      feedback = content;
-      tags = ['analyzed'];
     }
 
     // ============================================================

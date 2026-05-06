@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { Phone, ArrowLeft, RotateCcw, MessageCircle } from "lucide-react";
+import { Phone, ArrowLeft, RotateCcw, MessageCircle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/useI18n";
 import { useCrisisGeolocation } from "@/hooks/useCrisisGeolocation";
+import { toast } from "sonner";
 
 interface HotlineStepProps {
   isDark: boolean;
@@ -10,41 +11,34 @@ interface HotlineStepProps {
   onBack: () => void;
 }
 
-interface Hotline {
-  name: string;
-  phone: string;
-  description?: string;
-}
-
-const russianHotlines: Hotline[] = [
-  { name: "Телефон доверия", phone: "8-800-2000-122", description: "Бесплатно, круглосуточно" },
-  { name: "Центр экстренной помощи", phone: "112", description: "Экстренные службы" },
-  { name: "Психологическая помощь", phone: "051", description: "Бесплатно с мобильного" },
-];
-
-const internationalHotlines: Hotline[] = [
-  { name: "Crisis Text Line", phone: "Text HOME to 741741", description: "US" },
-  { name: "Samaritans", phone: "116 123", description: "UK" },
-  { name: "National Suicide Prevention", phone: "988", description: "US" },
-];
+const isTouchDevice = () =>
+  typeof window !== "undefined" &&
+  ("ontouchstart" in window || (navigator as any).maxTouchPoints > 0);
 
 export const HotlineStep = ({ isDark, onTryAgain, onBack }: HotlineStepProps) => {
-  const { t, language } = useI18n();
-  const { countryCode } = useCrisisGeolocation();
-
-  const hotlines = countryCode === 'RU' || language === 'ru' ? russianHotlines : internationalHotlines;
+  const { t } = useI18n();
+  const { hotlines } = useCrisisGeolocation();
+  const showCopy = !isTouchDevice();
 
   const handleCall = (phone: string) => {
-    // Extract just the number for tel: link
     const cleanPhone = phone.replace(/[^\d+]/g, '');
     if (cleanPhone) {
       window.location.href = `tel:${cleanPhone}`;
     }
   };
 
+  const handleCopy = async (e: React.MouseEvent, phone: string) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(phone);
+      toast.success(t('crisis.wizard.hotline.copied'));
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div className="flex flex-col items-center text-center px-4 py-6">
-      {/* Back button */}
       <button
         onClick={onBack}
         className={`self-start mb-4 flex items-center gap-2 text-sm ${
@@ -55,7 +49,6 @@ export const HotlineStep = ({ isDark, onTryAgain, onBack }: HotlineStepProps) =>
         {t('common.back')}
       </button>
 
-      {/* Title */}
       <h2 className={`text-xl font-semibold mb-2 ${
         isDark ? 'text-white' : 'text-gray-800'
       }`}>
@@ -66,22 +59,23 @@ export const HotlineStep = ({ isDark, onTryAgain, onBack }: HotlineStepProps) =>
         {t('crisis.wizard.hotline.subtitle')}
       </p>
 
-      {/* Hotline cards */}
       <div className="flex flex-col gap-3 w-full max-w-xs mb-6">
         {hotlines.map((hotline, index) => (
           <motion.div
-            key={hotline.name}
+            key={`${hotline.name}-${index}`}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
+            className={`relative flex items-center w-full p-4 rounded-xl text-left transition-all gap-4 ${
+              isDark 
+                ? 'bg-white/5 hover:bg-white/10 border border-white/10' 
+                : 'bg-white hover:bg-gray-50 border border-gray-200 shadow-sm'
+            }`}
           >
             <button
               onClick={() => handleCall(hotline.phone)}
-              className={`w-full p-4 rounded-xl text-left transition-all flex items-center gap-4 ${
-                isDark 
-                  ? 'bg-white/5 hover:bg-white/10 border border-white/10' 
-                  : 'bg-white hover:bg-gray-50 border border-gray-200 shadow-sm'
-              }`}
+              className="flex items-center gap-4 flex-1 min-w-0 text-left"
+              aria-label={`Call ${hotline.name}`}
             >
               <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                 isDark ? 'bg-green-500/20' : 'bg-green-50'
@@ -102,11 +96,24 @@ export const HotlineStep = ({ isDark, onTryAgain, onBack }: HotlineStepProps) =>
                 )}
               </div>
             </button>
+            {showCopy && (
+              <button
+                onClick={(e) => handleCopy(e, hotline.phone)}
+                className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
+                  isDark
+                    ? 'text-white/50 hover:text-white hover:bg-white/10'
+                    : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+                aria-label={t('crisis.wizard.hotline.copy')}
+                title={t('crisis.wizard.hotline.copy')}
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
           </motion.div>
         ))}
       </div>
 
-      {/* Message */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -121,7 +128,6 @@ export const HotlineStep = ({ isDark, onTryAgain, onBack }: HotlineStepProps) =>
         </p>
       </motion.div>
 
-      {/* Try again button */}
       <Button
         onClick={onTryAgain}
         variant="outline"

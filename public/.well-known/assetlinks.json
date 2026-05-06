@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "app.lovable.bezmyatezhnye",
+      "package_name": "com.newdawnjourney.app",
       "sha256_cert_fingerprints": [
-        "PLACEHOLDER:REPLACE_WITH_YOUR_SIGNING_KEY_SHA256_FINGERPRINT"
+        "PLACEHOLDER:REPLACE_WITH_RELEASE_KEYSTORE_SHA256_AFTER_FIRST_BUILD"
       ]
     }
   }

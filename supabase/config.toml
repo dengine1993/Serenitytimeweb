@@ -68,9 +68,6 @@ verify_jwt = true
 [functions.toggle-auto-renew]
 verify_jwt = true
 
-[functions.upgrade-subscription]
-verify_jwt = true
-
 [functions.admin-pricing]
 verify_jwt = true
 
@@ -87,16 +84,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.admin-logs]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-payments]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-ai-usage]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-database]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-chat]
 verify_jwt = false
@@ -108,5 +105,20 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.admin-ai-memory]
+verify_jwt = true
+
+[functions.admin-moderation]
+verify_jwt = true
+
+
+[functions.get-vapid-public-key]
 verify_jwt = false
 
+[functions.push-dispatch]
+verify_jwt = false
+
+[functions.notify-event]
+verify_jwt = false
+
+[functions.admin-broadcast-push]
+verify_jwt = false

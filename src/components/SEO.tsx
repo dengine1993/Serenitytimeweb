@@ -23,7 +23,7 @@ const SEO = ({
   const location = useLocation();
   
   const appName = t("common.appName");
-  const baseUrl = "https://bezmyatezhnye.lovable.app";
+  const baseUrl = "https://newdawnjourney.com";
   const currentUrl = url || `${baseUrl}${location.pathname}`;
   
   // For landing page, use custom social media texts
@@ -72,7 +72,7 @@ const SEO = ({
 
       {/* Additional Meta Tags */}
       <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-      <meta name="theme-color" content="#0A0F18" />
+      <meta name="theme-color" content="#1a0a2e" />
       <meta name="mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

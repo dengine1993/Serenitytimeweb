@@ -13,6 +13,12 @@ interface RegistrationData {
   birthYear?: number;
   country?: string;
   city?: string;
+  /** @deprecated больше не запрашиваем; колонка в БД сохранена для исторических данных */
+  specialCategoryConsent?: boolean;
+  /** 152-ФЗ — подтверждение возраста 16+ */
+  ageConfirmed?: boolean;
+  /** Опционально: разрешение передавать имя/ник из профиля Дживе */
+  nameToJivaConsent?: boolean;
 }
 
 interface AuthContextType {
@@ -145,7 +151,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (registration.birthYear) updateData.birth_year = registration.birthYear;
       if (registration.country) updateData.country = registration.country;
       if (registration.city) updateData.city = registration.city;
-      
+      // 152-ФЗ: фиксируем подтверждение возраста и согласие на обращение по имени
+      if (registration.ageConfirmed) updateData.age_confirmed_at = new Date().toISOString();
+      if (registration.nameToJivaConsent) updateData.name_to_jiva_consent_at = new Date().toISOString();
+
       if (Object.keys(updateData).length > 0) {
         // Use service role would be ideal, but we can update after profile is created
         // The trigger will create the profile, then we update it

@@ -2,19 +2,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { addDays } from 'date-fns';
 
 /**
- * Check if user has active Premium subscription
+ * Check if user has active Premium subscription.
+ * Делегирует серверной функции is_premium, которая учитывает:
+ *  - активную подписку в subscriptions
+ *  - ручной грант через profiles.premium_until
  */
 export async function isPremium(userId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('subscriptions')
-    .select('status, current_period_end')
-    .eq('user_id', userId)
-    .eq('plan', 'premium')
-    .single();
-
-  if (error || !data) return false;
-
-  return data.status === 'active' && new Date(data.current_period_end) > new Date();
+  const { data, error } = await supabase.rpc('is_premium', { p_user_id: userId });
+  if (error) {
+    console.error('[entitlements] is_premium rpc failed:', error);
+    return false;
+  }
+  return data === true;
 }
 
 /**
@@ -30,7 +29,7 @@ export async function applyReferral(inviterCode: string, inviteeUserId: string):
     .from('profiles')
     .select('id')
     .eq('referral_code', inviterCode)
-    .single();
+    .maybeSingle();
 
   if (!inviter) {
     return { success: false, error: 'Реферальный код не найден' };
@@ -46,7 +45,7 @@ export async function applyReferral(inviterCode: string, inviteeUserId: string):
     .from('referrals_v2')
     .select('id')
     .eq('invited_user_id', inviteeUserId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     return { success: false, error: 'Вы уже использовали реферальный код' };
@@ -78,7 +77,7 @@ export async function grantReferralRewards(inviteeUserId: string): Promise<void>
     .from('referrals_v2')
     .select('inviter_user_id, inviter_reward_days')
     .eq('invited_user_id', inviteeUserId)
-    .single();
+    .maybeSingle();
 
   if (!referral) return;
 
@@ -88,7 +87,7 @@ export async function grantReferralRewards(inviteeUserId: string): Promise<void>
     .select('current_period_end')
     .eq('user_id', referral.inviter_user_id)
     .eq('plan', 'premium')
-    .single();
+    .maybeSingle();
 
   if (inviterSub && inviterSub.current_period_end) {
     const newEnd = addDays(new Date(inviterSub.current_period_end), referral.inviter_reward_days);

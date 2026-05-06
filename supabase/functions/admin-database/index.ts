@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { sanitizeSearch } from '../_shared/admin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,11 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// Tables admins are NEVER allowed to bulk-delete from (read-only via UI)
+const PROTECTED_TABLES = new Set([
+  'profiles', 'subscriptions', 'payments', 'user_roles', 'admin_logs', 'consent_log',
+]);
 
 // Whitelist of tables admins are allowed to inspect
 const ALLOWED_TABLES = new Set([
@@ -24,7 +30,7 @@ const ALLOWED_TABLES = new Set([
   'jiva_memory_chunks', 'jiva_sessions_v2',
   'training_examples', 'trial_events', 'trial_messages', 'trial_sessions',
   // Дневник / Кризис
-  'mood_entries', 'smer_entries', 'emotion_calendar', 'daily_checkins',
+  'mood_entries', 'emotion_calendar', 'daily_checkins',
   'crisis_sessions', 'art_therapy_sessions',
   // Личные чаты
   'private_conversations', 'private_messages', 'private_chat_requests',
@@ -120,29 +126,26 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Fetch one row to derive columns + types from the response
-      const { data: sampleRows, error: sampleErr } = await admin
-        .from(table).select('*').limit(1);
-      if (sampleErr) throw sampleErr;
+      // Use information_schema via RPC — works for empty tables too.
+      const { data: schemaRows, error: schemaErr } = await admin
+        .rpc('get_table_columns', { p_table: table });
+      if (schemaErr) throw schemaErr;
 
-      // Use information_schema via RPC? We don't have one. Derive from sample + known PK heuristic.
-      const columns: { key: string; data_type: string; is_pk: boolean }[] = [];
-      const sample = sampleRows?.[0] ?? {};
-      const knownTextLike = new Set<string>();
+      const mapType = (dataType: string): string => {
+        const t = (dataType || '').toLowerCase();
+        if (t === 'boolean') return 'boolean';
+        if (t === 'jsonb' || t === 'json') return 'json';
+        if (t === 'uuid') return 'uuid';
+        if (t.includes('timestamp') || t === 'date' || t === 'time') return 'date';
+        if (t === 'integer' || t === 'bigint' || t === 'smallint' || t === 'numeric' || t === 'real' || t === 'double precision') return 'number';
+        return 'text';
+      };
 
-      for (const [key, value] of Object.entries(sample)) {
-        let type = 'text';
-        if (value === null) type = 'unknown';
-        else if (typeof value === 'boolean') type = 'boolean';
-        else if (typeof value === 'number') type = 'number';
-        else if (typeof value === 'object') type = 'json';
-        else if (typeof value === 'string') {
-          if (/^\d{4}-\d{2}-\d{2}T/.test(value)) type = 'date';
-          else if (/^[0-9a-f]{8}-[0-9a-f]{4}/.test(value)) type = 'uuid';
-          else { type = 'text'; knownTextLike.add(key); }
-        }
-        columns.push({ key, data_type: type, is_pk: key === 'id' });
-      }
+      const columns = (schemaRows ?? []).map((c: { column_name: string; data_type: string }) => ({
+        key: c.column_name,
+        data_type: mapType(c.data_type),
+        is_pk: c.column_name === 'id',
+      }));
 
       return new Response(JSON.stringify({ columns, pk: 'id' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -178,8 +181,8 @@ Deno.serve(async (req) => {
       if (search && cols.length) {
         // Build OR ilike on text-like columns
         const textCols = Object.entries(sample).filter(([_, v]) => typeof v === 'string').map(([k]) => k);
-        if (textCols.length) {
-          const safe = search.replace(/[%,]/g, ' ');
+        const safe = sanitizeSearch(search);
+        if (textCols.length && safe) {
           const orExpr = textCols.map((c) => `${c}.ilike.%${safe}%`).join(',');
           q = q.or(orExpr);
         }
@@ -203,6 +206,11 @@ Deno.serve(async (req) => {
       if (!ALLOWED_TABLES.has(table)) {
         return new Response(JSON.stringify({ error: 'Table not allowed' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (PROTECTED_TABLES.has(table)) {
+        return new Response(JSON.stringify({ error: `Удаление из таблицы "${table}" запрещено через интерфейс` }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       if (!Array.isArray(ids) || ids.length === 0) {

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Sparkles, MessageSquare, Zap, Crown, X, ArrowRight, ArrowLeft, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AppTourProps {
   onComplete: () => void;
@@ -12,8 +13,8 @@ const steps = [
   {
     id: 'welcome',
     icon: Sparkles,
-    title: 'Добро пожаловать в Безмятежные, Друг! 🌿',
-    content: 'Здесь ты можешь делиться маленькими радостями, общаться с понимающими людьми, рисовать эмоции и находить поддержку.',
+    title: 'Добро пожаловать в Восход 🌅',
+    content: 'Здесь не «успокаивают». Здесь помогают сделать один маленький шаг сегодня — и вернуться завтра.',
     target: null,
   },
   {
@@ -27,21 +28,21 @@ const steps = [
     id: 'actions',
     icon: Zap,
     title: 'Быстрые инструменты',
-    content: 'Арт-терапия, Дневник, Навигатор, Jiva — все инструменты под рукой',
+    content: '«Образ дня», Дневник, Дживу — всё под рукой, чтобы успокоить голову перед действием',
     target: '#quick-actions',
   },
   {
     id: 'community',
     icon: Users,
     title: 'Сообщество',
-    content: 'Общайся с другими в спокойном чате — поддержка и доброта ❤️',
+    content: 'Общайся с теми, кто тоже идёт от боли к прогрессу ❤️',
     target: '#community-tab',
   },
   {
     id: 'premium',
     icon: Crown,
     title: 'Premium',
-    content: 'Безлимитный Jiva и полный анализ арт-терапии ✨',
+    content: 'Jiva Deep — проводник, который помнит каждый твой шаг ✨',
     target: '#premium-card',
   },
 ];
@@ -81,6 +82,8 @@ export function AppTour({ onComplete }: AppTourProps) {
   const handleComplete = () => {
     setIsVisible(false);
     localStorage.setItem('app_tour_completed', 'true');
+    // Persist on the user account so the tour doesn't repeat after storage clear / on a new device
+    supabase.auth.updateUser({ data: { app_tour_completed: true } }).catch(() => {});
     onComplete();
   };
 

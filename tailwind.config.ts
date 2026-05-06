@@ -93,6 +93,9 @@ export default {
       },
       backgroundImage: {
         'winter-gradient': 'var(--winter-gradient)',
+        'sunrise': 'var(--gradient-sunrise)',
+        'sunrise-ambient': 'var(--gradient-ambient)',
+        'sunrise-shine': 'var(--gradient-shine)',
       },
       borderRadius: {
         lg: "var(--radius)",

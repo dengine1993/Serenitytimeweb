@@ -1,20 +1,28 @@
 import { motion } from 'framer-motion';
+import { useI18n } from '@/hooks/useI18n';
 
 interface TypingIndicatorProps {
   typingUsers: { user_id: string; display_name: string }[];
 }
 
 export function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
+  const { t } = useI18n();
   if (typingUsers.length === 0) return null;
 
   const getTypingText = () => {
     if (typingUsers.length === 1) {
-      return `${typingUsers[0].display_name} печатает`;
+      return t('community.typing.single', { name: typingUsers[0].display_name });
     }
     if (typingUsers.length === 2) {
-      return `${typingUsers[0].display_name} и ${typingUsers[1].display_name} печатают`;
+      return t('community.typing.double', {
+        name1: typingUsers[0].display_name,
+        name2: typingUsers[1].display_name,
+      });
     }
-    return `${typingUsers[0].display_name} и ещё ${typingUsers.length - 1} печатают`;
+    return t('community.typing.many', {
+      name: typingUsers[0].display_name,
+      count: typingUsers.length - 1,
+    });
   };
 
   return (

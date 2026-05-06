@@ -38,10 +38,10 @@ export const FloatingCtaButton = ({ showAfter = 400 }: FloatingCtaButtonProps) =
           <Link
             to="/auth"
             aria-label={t("index.stickyBar.cta", "Войти бесплатно")}
-            className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-[0_8px_30px_rgba(16,185,129,0.55)] border border-emerald-300/40 hover:shadow-[0_8px_40px_rgba(16,185,129,0.8)] transition-shadow"
+            className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-[0_8px_30px_rgba(249,115,22,0.55)] border border-orange-300/40 hover:shadow-[0_8px_40px_rgba(249,115,22,0.8)] transition-shadow"
           >
             <motion.span
-              className="absolute inset-0 rounded-full bg-emerald-400/40"
+              className="absolute inset-0 rounded-full bg-orange-400/40"
               animate={{ scale: [1, 1.35, 1], opacity: [0.6, 0, 0.6] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             />

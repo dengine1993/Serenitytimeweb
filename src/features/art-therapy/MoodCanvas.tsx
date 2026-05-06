@@ -416,7 +416,7 @@ export function MoodCanvas() {
       }
 
       const today = new Date().toISOString().split('T')[0];
-      const artNote = `🎨 Арт-терапия: ${analysisResult.tags.join(', ')}\n\n${analysisResult.feedback.slice(0, 200)}...`;
+      const artNote = `🎨 Образ дня: ${analysisResult.tags.join(', ')}\n\n${analysisResult.feedback.slice(0, 200)}...`;
       
       const { data: existing, error: existingError } = await supabase
         .from('mood_entries')

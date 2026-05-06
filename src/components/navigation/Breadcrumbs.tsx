@@ -18,7 +18,7 @@ const routeNames: Record<string, string> = {
   "/crisis": "Кризисный режим",
   "/premium": "Premium",
   "/settings": "Настройки",
-  "/art-therapy": "Арт-терапия",
+  "/art-therapy": "Образ дня",
   "/admin": "Админ-панель",
 };
 

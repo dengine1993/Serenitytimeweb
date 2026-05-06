@@ -45,7 +45,7 @@ export const ArrivalStep = ({ isDark, onStart, onEmergency }: ArrivalStepProps) 
         }`} />
         <img 
           src={logoImage} 
-          alt="Безмятежные"
+          alt="Восход"
           className="relative w-28 h-28 rounded-full object-cover"
         />
         <motion.div

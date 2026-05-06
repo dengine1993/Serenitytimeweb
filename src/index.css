@@ -99,186 +99,104 @@ All colors MUST be HSL.
   }
   
   :root {
-    /* Calm & Soothing Dark Theme - Anxiety-Friendly */
-    --background: 222 47% 11%; /* Deep navy #0F172A */
-    --foreground: 220 13% 82%; /* Off-white #D1D5DB */
+    /* ============================================================
+       BRAND: ВОСХОД (Sunrise) — единая тёмная тема как на лендинге.
+       База: ночь #07050f → #0d0820 → #1a0a2e → #3a1240 (пурпурный рассвет)
+       Акценты: amber/orange/rose/pink — тёплое утро над холодной ночью.
+       ============================================================ */
+    --background: 257 56% 6%;        /* #0d0820 — глубокая ночь */
+    --foreground: 35 60% 95%;        /* кремово-белый, как #FFE2BD на тексте */
 
-    /* Accessibility: minimum font size */
+    /* Accessibility */
     font-size: 16px;
 
-    --card: 220 40% 13%; /* Slightly lighter navy */
-    --card-foreground: 215 20% 90%;
+    --card: 270 45% 10%;             /* плотный пурпур карточки */
+    --card-foreground: 35 50% 94%;
 
-    --popover: 220 38% 15%;
-    --popover-foreground: 215 20% 90%;
+    --popover: 270 50% 9%;
+    --popover-foreground: 35 50% 94%;
 
-    /* Primary - Muted Teal (calming) */
-    --primary: 174 60% 35%; /* Dark teal #134E4A */
-    --primary-glow: 174 50% 45%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary — янтарный рассвет (amber-400/500) */
+    --primary: 35 92% 58%;           /* #f5a524 amber */
+    --primary-glow: 28 96% 60%;      /* #f97316 orange-500 */
+    --primary-foreground: 270 60% 8%;
 
-    /* Secondary - Muted Lavender */
-    --secondary: 263 50% 35%; /* Dark lavender #4C1D95 with muted tone */
-    --secondary-glow: 263 45% 45%;
+    /* Secondary — розовый горизонт (rose-500/pink-500) */
+    --secondary: 350 89% 60%;        /* #fb7185 rose-400 */
+    --secondary-glow: 330 81% 60%;   /* #ec4899 pink-500 */
     --secondary-foreground: 0 0% 100%;
 
-    /* Muted - Soft Gray */
-    --muted: 220 25% 18%;
-    --muted-foreground: 215 15% 65%;
+    /* Muted — приглушённый ночной */
+    --muted: 265 35% 14%;
+    --muted-foreground: 30 25% 75%;
 
-    /* Accent - Soft Cyan */
-    --accent: 190 50% 40%;
-    --accent-glow: 190 45% 50%;
-    --accent-foreground: 222 47% 11%;
+    /* Accent — кремовый рассветный (#FFE2BD) */
+    --accent: 30 100% 87%;
+    --accent-glow: 25 100% 78%;      /* #FFB68B */
+    --accent-foreground: 270 60% 8%;
 
-    /* Destructive - Softened (not alarming) */
-    --destructive: 174 55% 30%; /* Using teal instead of red for crisis */
+    /* Destructive — тёплый rose */
+    --destructive: 350 89% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 25% 20%;
-    --input: 220 25% 16%;
-    --ring: 174 60% 35%;
+    --border: 270 30% 20%;
+    --input: 270 35% 12%;
+    --ring: 35 92% 58%;
 
     --radius: 1.25rem;
 
-    /* Premium Glassmorphism - Softer */
-    --glass-bg: 220 35% 14%;
-    --glass-border: 220 20% 22%;
-    --glass-hover: 220 30% 18%;
-    --glass-shine: 0 0% 100% / 0.08;
+    /* Glassmorphism — стеклянная ночь с тёплым подтоном */
+    --glass-bg: 270 40% 11%;
+    --glass-border: 35 40% 50% / 0.18;
+    --glass-hover: 270 38% 15%;
+    --glass-shine: 35 100% 80% / 0.10;
 
-    /* Calming Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(174, 60%, 35%), hsl(190, 50%, 40%));
-    --gradient-secondary: linear-gradient(135deg, hsl(263, 45%, 35%), hsl(220, 40%, 35%));
-    --gradient-ambient: linear-gradient(180deg, hsl(222, 47%, 11%) 0%, hsl(220, 40%, 13%) 50%, hsl(220, 35%, 15%) 100%);
-    --gradient-shine: linear-gradient(135deg, transparent 0%, hsl(0, 0%, 100%, 0.05) 50%, transparent 100%);
+    /* Sunrise Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(28, 96%, 60%), hsl(35, 92%, 58%));               /* orange→amber CTA */
+    --gradient-secondary: linear-gradient(135deg, hsl(350, 89%, 60%), hsl(330, 81%, 60%));            /* rose→pink */
+    --gradient-sunrise: linear-gradient(135deg, hsl(28, 96%, 60%), hsl(35, 92%, 58%), hsl(350, 89%, 65%)); /* orange→amber→rose */
+    --gradient-ambient: radial-gradient(ellipse 120% 80% at 50% 0%, hsl(289, 55%, 16%) 0%, hsl(266, 60%, 11%) 35%, hsl(257, 56%, 8%) 70%, hsl(252, 60%, 4%) 100%);
+    --gradient-shine: linear-gradient(135deg, transparent 0%, hsl(35, 100%, 80%, 0.10) 50%, transparent 100%);
 
-    /* Soft Glow Effects */
-    --glow-primary: 0 0 30px hsl(174, 60%, 35%, 0.3);
-    --glow-secondary: 0 0 30px hsl(263, 45%, 40%, 0.3);
-    --glow-accent: 0 0 30px hsl(190, 50%, 40%, 0.3);
+    /* Glow — тёплый рассветный */
+    --glow-primary: 0 0 40px hsl(28, 96%, 55%, 0.45);
+    --glow-secondary: 0 0 40px hsl(350, 89%, 60%, 0.40);
+    --glow-accent: 0 0 40px hsl(30, 100%, 80%, 0.30);
 
-    /* Soft Shadows */
-    --shadow-sm: 0 2px 8px hsl(222, 50%, 5%, 0.2);
-    --shadow-md: 0 8px 24px hsl(222, 50%, 5%, 0.3);
-    --shadow-lg: 0 16px 48px hsl(222, 50%, 5%, 0.4);
-    --shadow-glow: 0 0 40px hsl(174, 60%, 35%, 0.2);
+    /* Shadows */
+    --shadow-sm: 0 2px 8px hsl(252, 60%, 3%, 0.35);
+    --shadow-md: 0 8px 24px hsl(252, 60%, 3%, 0.45);
+    --shadow-lg: 0 20px 50px hsl(255, 226, 189, 0.15);
+    --shadow-glow: 0 0 60px hsl(28, 96%, 55%, 0.35);
 
-    /* Aurora Effects - Muted */
-    --aurora-blue: 200 50% 40% / 0.1;
-    --aurora-purple: 263 40% 40% / 0.1;
-    --aurora-cyan: 190 45% 40% / 0.1;
+    /* Aurora — пурпурно-тёплая */
+    --aurora-blue: 270 60% 40% / 0.18;
+    --aurora-purple: 289 55% 35% / 0.20;
+    --aurora-cyan: 28 96% 55% / 0.10;
 
-    /* Jiva Aura States - Calming */
-    --jiva-aura-calm: 174 55% 45%;
-    --jiva-aura-calm-glow: 174 55% 45% / 0.25;
-    --jiva-aura-hope: 158 50% 45%; /* Soft green instead of yellow */
-    --jiva-aura-hope-glow: 158 50% 45% / 0.25;
-    --jiva-aura-sad: 220 45% 50%; /* Muted blue instead of purple */
-    --jiva-aura-sad-glow: 220 45% 50% / 0.25;
-    --jiva-aura-overload: 190 50% 40%;
-    --jiva-aura-overload-glow: 190 50% 40% / 0.25;
+    /* Jiva Aura — рассветные состояния */
+    --jiva-aura-calm: 30 100% 78%;
+    --jiva-aura-calm-glow: 30 100% 78% / 0.30;
+    --jiva-aura-hope: 35 92% 60%;
+    --jiva-aura-hope-glow: 35 92% 60% / 0.30;
+    --jiva-aura-sad: 270 50% 55%;
+    --jiva-aura-sad-glow: 270 50% 55% / 0.25;
+    --jiva-aura-overload: 350 89% 65%;
+    --jiva-aura-overload-glow: 350 89% 65% / 0.30;
 
-    /* Semantic Category Colors - Muted & Calming */
-    --amber: 158 50% 40%; /* Soft sage green */
-    --amber-glow: 158 50% 40% / 0.25;
-    --violet: 220 40% 45%; /* Muted slate blue */
-    --violet-glow: 220 40% 45% / 0.25;
-    --emerald: 174 55% 38%; /* Calm teal */
-    --emerald-glow: 174 55% 38% / 0.25;
-    --rose: 190 45% 45%; /* Soft cyan instead of rose */
-    --rose-glow: 190 45% 45% / 0.25;
+    /* Semantic Categories — рассветная гамма */
+    --amber: 35 92% 58%;
+    --amber-glow: 35 92% 58% / 0.30;
+    --violet: 289 55% 50%;
+    --violet-glow: 289 55% 50% / 0.25;
+    --emerald: 28 96% 60%;            /* перекрашен в orange ради единства */
+    --emerald-glow: 28 96% 60% / 0.30;
+    --rose: 350 89% 65%;
+    --rose-glow: 350 89% 65% / 0.30;
 
-    /* Reply preview text colors - Dark theme */
-    --reply-author-color: 0 0% 100% / 0.8;
-    --reply-content-color: 0 0% 100% / 0.6;
-  }
-
-  /* Light Theme */
-  .light {
-    --background: 0 0% 98%;
-    --foreground: 240 20% 10%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 240 20% 10%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 20% 10%;
-
-    /* Primary - Vibrant Blue */
-    --primary: 211 100% 45%;
-    --primary-glow: 211 100% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    /* Secondary - Electric Purple */
-    --secondary: 280 70% 50%;
-    --secondary-glow: 280 70% 65%;
-    --secondary-foreground: 0 0% 100%;
-
-    /* Muted - Light Gray */
-    --muted: 240 5% 92%;
-    --muted-foreground: 240 8% 40%;
-
-    /* Accent - Cyan */
-    --accent: 190 80% 45%;
-    --accent-glow: 190 80% 60%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 85% 55%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 240 5% 85%;
-    --input: 240 5% 90%;
-    --ring: 211 100% 45%;
-
-    /* Premium Glassmorphism - Light */
-    --glass-bg: 240 10% 98%;
-    --glass-border: 240 5% 85%;
-    --glass-hover: 240 5% 95%;
-    --glass-shine: 0 0% 100% / 0.8;
-
-    /* Light Gradients */
-    --gradient-ambient: linear-gradient(180deg, hsl(0, 0%, 98%) 0%, hsl(240, 10%, 96%) 50%, hsl(240, 10%, 94%) 100%);
-
-    /* Glow Effects - Light (subtle) */
-    --glow-primary: 0 0 30px hsl(211, 100%, 45%, 0.25);
-    --glow-secondary: 0 0 30px hsl(280, 70%, 50%, 0.25);
-    --glow-accent: 0 0 30px hsl(190, 80%, 45%, 0.25);
-
-    /* Aurora Effects - Light (subtle) */
-    --aurora-blue: 211 100% 45% / 0.08;
-    --aurora-purple: 280 70% 50% / 0.08;
-    --aurora-indigo: 250 70% 45% / 0.08;
-
-    /* Jiva Aura States - Light */
-    --jiva-aura-calm: 190 70% 45%;
-    --jiva-aura-calm-glow: 190 70% 45% / 0.2;
-    --jiva-aura-hope: 45 85% 50%;
-    --jiva-aura-hope-glow: 45 85% 50% / 0.2;
-    --jiva-aura-sad: 270 60% 50%;
-    --jiva-aura-sad-glow: 270 60% 50% / 0.2;
-    --jiva-aura-overload: 200 75% 40%;
-    --jiva-aura-overload-glow: 200 75% 40% / 0.2;
-
-    /* Semantic Category Colors - Light */
-    --amber: 38 92% 45%;
-    --amber-glow: 38 92% 45% / 0.2;
-    --violet: 262 73% 50%;
-    --violet-glow: 262 73% 50% / 0.2;
-    --emerald: 158 64% 42%;
-    --emerald-glow: 158 64% 42% / 0.2;
-    --rose: 351 85% 60%;
-    --rose-glow: 351 85% 60% / 0.2;
-
-    /* Lighter Shadows */
-    --shadow-sm: 0 2px 8px hsl(0, 0%, 0%, 0.05);
-    --shadow-md: 0 8px 24px hsl(0, 0%, 0%, 0.08);
-    --shadow-lg: 0 16px 48px hsl(0, 0%, 0%, 0.12);
-    --shadow-glow: 0 0 60px hsl(211, 100%, 55%, 0.15);
-
-    /* Reply preview text colors - Light theme */
-    --reply-author-color: 0 0% 0%;
-    --reply-content-color: 220 10% 25%;
+    /* Reply preview text colors */
+    --reply-author-color: 35 60% 95% / 0.85;
+    --reply-content-color: 35 40% 90% / 0.65;
   }
 }
 
@@ -330,29 +248,29 @@ All colors MUST be HSL.
     }
   }
 
-  /* Ambient light blobs - only for dark theme */
-  :root:not(.light) body::before {
+  /* Sunrise ambient blobs — тёплый рассвет над холодной ночью */
+  body::before {
     content: '';
     position: fixed;
     top: -20%;
     left: -10%;
-    width: 50%;
-    height: 50%;
-    background: radial-gradient(circle, rgba(30, 58, 138, 0.3) 0%, transparent 70%);
-    filter: blur(80px);
+    width: 55%;
+    height: 55%;
+    background: radial-gradient(circle, rgba(251, 146, 60, 0.22) 0%, transparent 70%);
+    filter: blur(90px);
     z-index: -1;
     pointer-events: none;
   }
 
-  :root:not(.light) body::after {
+  body::after {
     content: '';
     position: fixed;
-    top: 40%;
+    top: 35%;
     right: -15%;
     width: 60%;
     height: 60%;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 70%);
-    filter: blur(100px);
+    background: radial-gradient(circle, rgba(244, 63, 94, 0.18) 0%, transparent 70%);
+    filter: blur(110px);
     z-index: -1;
     pointer-events: none;
   }
@@ -535,7 +453,7 @@ All colors MUST be HSL.
   /* Holographic Text */
   .holographic-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(211, 100%, 55%), hsl(280, 90%, 60%), hsl(190, 100%, 50%));
+    background-image: linear-gradient(135deg, hsl(28, 96%, 60%), hsl(35, 92%, 58%), hsl(350, 89%, 65%));
     background-size: 200% 200%;
     animation: gradient-shift 5s ease infinite;
   }
@@ -672,11 +590,11 @@ All colors MUST be HSL.
   /* Iridescent Effect */
   .iridescent {
     background: linear-gradient(135deg,
-        hsl(211, 100%, 55%, 0.2) 0%,
-        hsl(280, 90%, 60%, 0.2) 25%,
-        hsl(190, 100%, 50%, 0.2) 50%,
-        hsl(280, 90%, 60%, 0.2) 75%,
-        hsl(211, 100%, 55%, 0.2) 100%);
+        hsl(28, 96%, 60%, 0.22) 0%,
+        hsl(35, 92%, 58%, 0.22) 25%,
+        hsl(350, 89%, 65%, 0.22) 50%,
+        hsl(330, 81%, 60%, 0.22) 75%,
+        hsl(28, 96%, 60%, 0.22) 100%);
     background-size: 200% 200%;
     animation: iridescent-shift 3s ease infinite;
   }

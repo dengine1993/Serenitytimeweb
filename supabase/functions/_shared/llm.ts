@@ -3,6 +3,9 @@
  * Supports: LOVABLE (default) or OPENROUTER
  */
 
+import { sanitizeMessages } from './anonymize.ts';
+
+
 type LLMProvider = 'LOVABLE' | 'OPENROUTER' | 'POLZA';
 
 interface Message {
@@ -27,6 +30,10 @@ export async function callLLM(
     model?: string;
   } = {}
 ): Promise<LLMResponse> {
+  // Финальный шлюз обезличивания: любая edge-функция, которая вызывает callLLM,
+  // автоматически получает redactPII по всем content свободного текста.
+  messages = sanitizeMessages(messages as unknown as Array<{ role: string; content: unknown }>) as unknown as Message[];
+
   const provider = ((Deno.env.get('LLM_PROVIDER') || 'LOVABLE') as string).toUpperCase() as LLMProvider;
 
   switch (provider) {
@@ -165,6 +172,25 @@ async function callPolzaLLM(
 
   const model = options.model || Deno.env.get('POLZA_CHAT_MODEL') || Deno.env.get('POLZA_JIVA_MODEL') || 'x-ai/grok-4.20';
   const endpoint = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
+
+  // Anthropic prompt caching: оборачиваем system-сообщение в content-блок
+  // с cache_control ephemeral TTL 1h. Это даёт ~90% экономии на повторных
+  // вызовах с одним и тем же system prompt (Claude чтение кеша = 0.1x).
+  const isAnthropic = model.startsWith('anthropic/');
+  const cachedMessages = isAnthropic
+    ? messages.map((m, i) => {
+        if (i === 0 && m.role === 'system' && typeof m.content === 'string') {
+          return {
+            role: 'system',
+            content: [
+              { type: 'text', text: m.content, cache_control: { type: 'ephemeral', ttl: '1h' } },
+            ],
+          } as unknown as Message;
+        }
+        return m;
+      })
+    : messages;
+
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -173,9 +199,13 @@ async function callPolzaLLM(
     },
     body: JSON.stringify({
       model,
-      messages,
+      messages: cachedMessages,
       max_tokens: options.maxTokens ?? 400,
       temperature: options.temperature ?? 0.7,
+      // Для Anthropic-моделей: основной провайдер Anthropic, фолбэк — Amazon Bedrock.
+      ...(isAnthropic
+        ? { provider: { order: ['Anthropic', 'Amazon Bedrock'], allow_fallbacks: true } }
+        : {}),
     }),
   });
 

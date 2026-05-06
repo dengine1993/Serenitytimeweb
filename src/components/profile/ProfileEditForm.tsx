@@ -28,11 +28,15 @@ const TIMEZONES = [
   { value: 'Asia/Kamchatka', label: 'Камчатка (UTC+12)' },
 ];
 
+type Gender = 'male' | 'female';
+
 interface ProfileData {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
   timezone: string | null;
+  gender: Gender | null;
+  name_to_jiva_consent_at: string | null;
 }
 
 export function ProfileEditForm() {
@@ -47,7 +51,9 @@ export function ProfileEditForm() {
     display_name: '',
     bio: '',
     avatar_url: null,
-    timezone: 'Europe/Moscow'
+    timezone: 'Europe/Moscow',
+    gender: null,
+    name_to_jiva_consent_at: null,
   });
 
   useEffect(() => {
@@ -56,7 +62,7 @@ export function ProfileEditForm() {
     const loadProfile = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('display_name, bio, avatar_url, timezone')
+        .select('display_name, bio, avatar_url, timezone, gender, name_to_jiva_consent_at')
         .eq('user_id', user.id)
         .single();
       
@@ -65,7 +71,9 @@ export function ProfileEditForm() {
           display_name: data.display_name || '',
           bio: data.bio || '',
           avatar_url: data.avatar_url,
-          timezone: data.timezone || 'Europe/Moscow'
+          timezone: data.timezone || 'Europe/Moscow',
+          gender: (data.gender === 'male' || data.gender === 'female') ? data.gender : null,
+          name_to_jiva_consent_at: data.name_to_jiva_consent_at ?? null,
         });
       }
       setLoading(false);
@@ -103,6 +111,10 @@ export function ProfileEditForm() {
 
   const handleSave = async () => {
     if (!user) return;
+    if (!profile.gender) {
+      toast.error(isRu ? 'Укажите пол — это нужно для корректных обращений Дживы' : 'Please select your gender');
+      return;
+    }
     
     setSaving(true);
     
@@ -112,7 +124,8 @@ export function ProfileEditForm() {
         .update({
           display_name: profile.display_name,
           bio: profile.bio,
-          timezone: profile.timezone
+          timezone: profile.timezone,
+          gender: profile.gender,
         })
         .eq('user_id', user.id);
       
@@ -141,7 +154,7 @@ export function ProfileEditForm() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* Avatar + Name in one card - more compact */}
+      {/* Avatar */}
       <div className="flex items-center gap-5 p-4 rounded-2xl bg-muted/30 border border-border">
         <div className="relative shrink-0">
           <Avatar className="w-20 h-20 ring-2 ring-primary/30">
@@ -168,17 +181,44 @@ export function ProfileEditForm() {
         </div>
         
         <div className="flex-1 min-w-0">
-          <Input
-            id="display_name"
-            value={profile.display_name || ''}
-            onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
-            placeholder={isRu ? 'Имя пользователя' : 'Display name'}
-            className="bg-transparent border-0 border-b border-border rounded-none px-0 text-lg font-medium focus-visible:ring-0 focus-visible:border-primary"
-          />
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-base font-medium truncate">
+            {profile.display_name || (isRu ? 'Без имени' : 'No name')}
+          </p>
+          <p className="text-sm text-muted-foreground truncate">
             {user?.email}
           </p>
         </div>
+      </div>
+
+      {/* Display name = «Как тебе обращаться» */}
+      <div className="space-y-2">
+        <Label htmlFor="display_name" className="text-sm text-muted-foreground">
+          {isRu ? 'Как тебе обращаться' : 'How to address you'}
+        </Label>
+        <Input
+          id="display_name"
+          value={profile.display_name || ''}
+          onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
+          placeholder={isRu ? 'Лиса, Алексей, Кэп…' : 'Fox, Alex, Cap…'}
+          maxLength={30}
+          className="bg-muted/30 border-border rounded-xl"
+        />
+        {profile.name_to_jiva_consent_at && profile.display_name?.trim() ? (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20">
+            <span className="text-base">💬</span>
+            <p className="text-xs text-foreground/80">
+              {isRu
+                ? <>Джива напишет: <span className="font-medium">«Привет, {profile.display_name.trim()}!»</span></>
+                : <>Jiva will write: <span className="font-medium">"Hi, {profile.display_name.trim()}!"</span></>}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {isRu
+              ? 'Сейчас Джива обращается нейтрально («друг»). Включить обращение по имени можно в Настройки → Приватность.'
+              : 'Jiva currently uses neutral address ("friend"). Enable name address in Settings → Privacy.'}
+          </p>
+        )}
       </div>
 
       {/* Bio */}
@@ -196,6 +236,40 @@ export function ProfileEditForm() {
         />
         <p className="text-xs text-muted-foreground text-right">
           {(profile.bio?.length || 0)}/200
+        </p>
+      </div>
+
+      {/* Gender — влияет на грамматику обращений Дживы */}
+      <div className="space-y-2">
+        <Label className="text-sm text-muted-foreground">
+          {isRu ? 'Пол' : 'Gender'}
+        </Label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setProfile(prev => ({ ...prev, gender: 'male' }))}
+            className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
+              profile.gender === 'male'
+                ? 'bg-primary/15 border-primary text-foreground'
+                : 'bg-muted/30 border-border text-muted-foreground hover:bg-muted/50'
+            }`}
+          >
+            {isRu ? 'Мужской' : 'Male'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setProfile(prev => ({ ...prev, gender: 'female' }))}
+            className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
+              profile.gender === 'female'
+                ? 'bg-primary/15 border-primary text-foreground'
+                : 'bg-muted/30 border-border text-muted-foreground hover:bg-muted/50'
+            }`}
+          >
+            {isRu ? 'Женский' : 'Female'}
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {isRu ? 'Чтобы Джива обращалась к тебе в правильном роде' : 'So Jiva uses the correct grammatical gender'}
         </p>
       </div>
 

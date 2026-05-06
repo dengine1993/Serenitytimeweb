@@ -12,14 +12,14 @@ import { toast } from 'sonner';
 import { Crown, RefreshCw, Save, AlertTriangle, Undo2, History, Eye, Check, Wind } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ProductId = 'premium_subscription_monthly' | 'premium_subscription_yearly';
+type ProductId = 'premium_subscription_monthly';
 
 interface ProductRow {
   id: ProductId;
   name: string;
   description: string;
-  price: number;       // current edited value
-  savedPrice: number;  // last value loaded from DB
+  price: number;
+  savedPrice: number;
   min: number;
   max: number;
 }
@@ -36,20 +36,11 @@ const INITIAL: ProductRow[] = [
   {
     id: 'premium_subscription_monthly',
     name: 'Premium Monthly',
-    description: 'Ежемесячная подписка «Опора»',
+    description: 'Ежемесячная подписка Premium',
     price: 690,
     savedPrice: 690,
     min: 290,
     max: 1990,
-  },
-  {
-    id: 'premium_subscription_yearly',
-    name: 'Premium Yearly',
-    description: 'Годовая подписка «Опора»',
-    price: 6990,
-    savedPrice: 6990,
-    min: 1990,
-    max: 19990,
   },
 ];
 
@@ -126,14 +117,8 @@ export default function AdminPricing() {
   }, [loadPrices, loadHistory]);
 
   const monthly = products.find(p => p.id === 'premium_subscription_monthly')!;
-  const yearly = products.find(p => p.id === 'premium_subscription_yearly')!;
 
   const dirty = useMemo(() => products.some(p => p.price !== p.savedPrice), [products]);
-  const yearlyWarning = yearly.price > monthly.price * 12;
-  const monthlyEquivalent = Math.round(yearly.price / 12);
-  const yearlySavings = monthly.price * 12 - yearly.price;
-  const yearlyDiscount = monthly.price > 0 ? Math.round((yearlySavings / (monthly.price * 12)) * 100) : 0;
-  const freeMonths = monthly.price > 0 ? Math.round(yearlySavings / monthly.price) : 0;
 
   const setPrice = (id: ProductId, value: number) => {
     if (!Number.isFinite(value)) return;
@@ -223,36 +208,7 @@ export default function AdminPricing() {
         <PriceCard
           row={monthly}
           onChange={v => setPrice(monthly.id, v)}
-          subtitle="Базовая подписка"
-        />
-
-        {/* Yearly */}
-        <PriceCard
-          row={yearly}
-          onChange={v => setPrice(yearly.id, v)}
-          subtitle="Длинный горизонт"
-          extra={
-            <div className="space-y-2 text-sm">
-              <Row label="Месячный эквивалент" value={formatRub(monthlyEquivalent) + ' / мес'} />
-              <Row
-                label="Экономия за год"
-                value={
-                  yearlySavings > 0
-                    ? `${formatRub(yearlySavings)} (≈ ${freeMonths} мес. в подарок)`
-                    : '—'
-                }
-              />
-              <Row label="Скидка от месячной" value={yearlyDiscount > 0 ? `${yearlyDiscount}%` : '—'} />
-              {yearlyWarning && (
-                <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/30 text-destructive">
-                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span className="text-xs">
-                    Годовая ({formatRub(yearly.price)}) дороже 12 месячных ({formatRub(monthly.price * 12)}). Скидки нет.
-                  </span>
-                </div>
-              )}
-            </div>
-          }
+          subtitle="Единственная подписка"
         />
 
         {/* User preview */}
@@ -276,10 +232,9 @@ export default function AdminPricing() {
             <PreviewCard
               tag="ОПОРА"
               icon={<Crown className="w-3.5 h-3.5 text-primary" />}
-              title="Тариф «Опора»"
+              title="Тариф Premium"
               subtitle="Глубокая работа с состоянием"
               price={`${formatRub(monthly.price)}/мес`}
-              hint={`или ${formatRub(yearly.price)}/год · ${formatRub(monthlyEquivalent)}/мес`}
               accent="primary"
               featured
             />
@@ -467,7 +422,7 @@ function PreviewCard({
       <p className="text-lg font-bold mt-2">{price}</p>
       {hint && <p className="text-[11px] text-muted-foreground mt-0.5">{hint}</p>}
       <div className="mt-3 space-y-1">
-        <PreviewFeature text={featured ? 'Безлимит AI с памятью' : '3 ознакомительных сообщения'} />
+        <PreviewFeature text={featured ? 'Безлимит AI с памятью' : '10 ознакомительных сообщений'} />
         <PreviewFeature text={featured ? '3 арт-анализа в день' : 'SOS, дыхание, дневник'} />
       </div>
     </div>

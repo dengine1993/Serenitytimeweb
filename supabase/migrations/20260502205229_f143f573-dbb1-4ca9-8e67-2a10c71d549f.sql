@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Users can insert own consent log" ON public.consent_log;

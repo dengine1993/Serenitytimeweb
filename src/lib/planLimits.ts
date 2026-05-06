@@ -12,17 +12,13 @@ export const ART_THERAPY_LIMITS = {
   },
 } as const;
 
-// Diary лимиты (v2.4.2)
+// Diary лимиты
 export const DIARY_LIMITS = {
   free: {
     calendarDays: 14,
-    smerArchiveDays: 14,
-    smerAiAnalysis: false,
   },
   premium: {
     calendarDays: -1,
-    smerArchiveDays: -1,
-    smerAiAnalysis: true,
   },
 } as const;
 

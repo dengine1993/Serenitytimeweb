@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import webpush from "https://esm.sh/web-push@3.6.7?target=deno";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,12 +7,27 @@ const corsHeaders = {
 };
 
 interface WebPushRequest {
-  subscription: any; // PushSubscription object from browser
+  subscription: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+  };
   title: string;
   body: string;
   icon?: string;
   badge?: string;
-  data?: any;
+  data?: Record<string, unknown>;
+}
+
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
+const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "mailto:support@serenitylight.app";
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  } catch (e) {
+    console.error("Failed to set VAPID details:", e);
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,69 +36,63 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+      return new Response(
+        JSON.stringify({ error: "VAPID keys not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const { subscription, title, body, icon, badge, data }: WebPushRequest = await req.json();
 
-    if (!subscription || !title || !body) {
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
       return new Response(
-        JSON.stringify({ error: "Subscription, title and body are required" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        JSON.stringify({ error: "Invalid subscription" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    if (!title || !body) {
+      return new Response(
+        JSON.stringify({ error: "title and body are required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Web Push VAPID keys should be stored in environment
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      console.error("VAPID keys not configured");
-      return new Response(
-        JSON.stringify({ error: "Web Push not configured" }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
-
-    // For now, we'll use the Web Push API directly
-    // In production, you'd use a library like web-push
     const payload = JSON.stringify({
       title,
       body,
-      icon: icon || "/icon-192.png",
-      badge: badge || "/icon-192.png",
-      data: data || {},
+      icon: icon ?? "/icon-192.png",
+      badge: badge ?? "/icon-192.png",
+      data: data ?? {},
     });
 
-    console.log("Web push payload:", payload);
-    console.log("Subscription:", subscription);
-
-    // Note: This is a placeholder. In production, use a proper Web Push library
-    // For now, return success to enable frontend testing
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        message: "Web Push notification queued (placeholder implementation)"
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
-      }
-    );
+    try {
+      const result = await webpush.sendNotification(subscription, payload, {
+        TTL: 60 * 60 * 24, // 24h
+      });
+      return new Response(
+        JSON.stringify({ success: true, statusCode: result.statusCode }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    } catch (err: any) {
+      // 404/410 = subscription expired — caller may want to delete it
+      const statusCode = err?.statusCode ?? 500;
+      console.error("web-push error:", statusCode, err?.body ?? err?.message);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          statusCode,
+          expired: statusCode === 404 || statusCode === 410,
+          error: err?.body ?? err?.message ?? "Push delivery failed",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
   } catch (error: any) {
-    console.error("Error sending web push:", error);
+    console.error("Error in send-web-push:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };

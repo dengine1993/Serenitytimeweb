@@ -36,14 +36,12 @@ serve(async (req) => {
     const [
       { data: profile },
       { data: moodEntries },
-      { data: smerEntries },
       { data: artSessions },
       { data: memoryChunks },
       { data: sessions }
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', user.id).single(),
       supabase.from('mood_entries').select('*').eq('user_id', user.id),
-      supabase.from('smer_entries').select('*').eq('user_id', user.id),
       supabase.from('art_therapy_sessions').select('*').eq('user_id', user.id),
       supabase.from('jiva_memory_chunks').select('*').eq('user_id', user.id),
       supabase.from('jiva_sessions_v2').select('*').eq('user_id', user.id)
@@ -54,13 +52,11 @@ serve(async (req) => {
       exported_at: new Date().toISOString(),
       profile: profile || null,
       mood_diary: moodEntries || [],
-      smer_diary: smerEntries || [],
       art_therapy: artSessions || [],
       memory_chunks: memoryChunks || [],
       sessions: sessions || [],
       statistics: {
         mood_entries: moodEntries?.length || 0,
-        smer_entries: smerEntries?.length || 0,
         art_sessions: artSessions?.length || 0,
         memory_chunks: memoryChunks?.length || 0,
         sessions: sessions?.length || 0

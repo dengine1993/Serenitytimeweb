@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { HeartIcon, PaintBrushIcon, BookOpenIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { PaintBrushIcon, BookOpenIcon, SparklesIcon } from '@heroicons/react/24/solid';
 import { Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,28 +18,18 @@ const steps = [
   {
     id: 'welcome',
     title: 'Добро пожаловать!',
-    subtitle: 'Рады видеть тебя в Безмятежных',
-    description: 'Это пространство для заботы о себе. Давай познакомимся с основными функциями.',
+    subtitle: 'Рад, что ты здесь',
+    description: 'Это твой Восход — пространство, чтобы расти. Покажу основные опоры пути.',
     icon: SparklesIcon,
     iconColor: 'text-amber-500',
     iconBg: 'bg-amber-100 dark:bg-amber/20',
     isLucide: false,
   },
   {
-    id: 'crisis',
-    title: 'Мне плохо',
-    subtitle: 'Срочная помощь',
-    description: 'Техники самопомощи, дыхательные упражнения и контакты горячих линий — всё под рукой, когда тебе тяжело.',
-    icon: HeartIcon,
-    iconColor: 'text-red-500',
-    iconBg: 'bg-red-100 dark:bg-destructive/20',
-    isLucide: false,
-  },
-  {
     id: 'psychologist',
-    title: 'Jiva',
-    subtitle: 'Мудрый наставник',
-    description: 'Поговори с Jiva. Он выслушает, поможет разобраться в чувствах и даст рекомендации. Помнит историю твоих переживаний.',
+    title: 'Джива',
+    subtitle: 'Твой AI-Друг и проводник',
+    description: 'Поговори с Дживой. Она выслушает, поможет увидеть, что внутри, и пройти следующий шаг рядом с тобой. Помнит твой путь.',
     icon: Brain,
     iconColor: 'text-violet-500',
     iconBg: 'bg-violet-100 dark:bg-violet/20',
@@ -48,8 +38,8 @@ const steps = [
   {
     id: 'diary',
     title: 'Дневник',
-    subtitle: 'Записи эмоций',
-    description: 'Отслеживай своё настроение, записывай мысли и наблюдай за прогрессом со временем.',
+    subtitle: 'Карта твоего пути',
+    description: 'Замечай настроение, фиксируй мысли — и со временем увидишь, как меняешься.',
     icon: BookOpenIcon,
     iconColor: 'text-teal-500',
     iconBg: 'bg-teal-100 dark:bg-emerald/20',
@@ -57,9 +47,9 @@ const steps = [
   },
   {
     id: 'art',
-    title: 'Арт-терапия',
-    subtitle: 'Рисуй и анализируй',
-    description: 'Рисуй свободно, а AI проанализирует рисунок и подскажет, что он может говорить о твоём состоянии.',
+    title: 'Образ дня',
+    subtitle: 'Когда нет слов',
+    description: 'Нарисуй, как сейчас — и Джива мягко отзовётся на то, что видит.',
     icon: PaintBrushIcon,
     iconColor: 'text-violet-500',
     iconBg: 'bg-violet-100 dark:bg-violet/20',
@@ -190,7 +180,7 @@ export function WelcomeModal({ open, onOpenChange, userId, userName }: WelcomeMo
                 onClick={handleNext}
                 className="flex-1 bg-gradient-to-r from-primary to-primary/80"
               >
-                {isLastStep ? 'Начать' : 'Далее'}
+                {isLastStep ? 'Сделать первый шаг' : 'Далее'}
               </Button>
             </div>
           </motion.div>

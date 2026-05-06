@@ -39,53 +39,55 @@ export default function EmailConfirmed() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/10 p-4">
+    <div
+      className="dark min-h-screen flex items-center justify-center p-4 text-white"
+      style={{ background: 'radial-gradient(ellipse 120% 80% at 50% 0%, #3a1240 0%, #1a0a2e 35%, #0d0820 70%, #07050f 100%)' }}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
         className="w-full max-w-md"
       >
-        <Card className="w-full p-8 bg-card/80 backdrop-blur-xl border-border/50 shadow-2xl">
+        <Card className="w-full p-8 bg-white/5 backdrop-blur-xl border border-amber-200/10 rounded-3xl shadow-[0_0_60px_rgba(251,146,60,0.08)]">
           <div className="text-center">
             {/* Success icon */}
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.1 }}
-              className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20"
+              className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-[0_0_24px_rgba(16,185,129,0.3)]"
             >
               <CheckCircle className="w-10 h-10 text-white" />
             </motion.div>
 
-            <h1 className="text-2xl font-bold text-foreground mb-2">
-              Email подтверждён! 🎉
+            <h1 className="font-hero font-medium text-3xl bg-gradient-to-r from-amber-200 via-white to-rose-300 bg-clip-text text-transparent mb-2">
+              Email подтверждён
             </h1>
-            <p className="text-muted-foreground mb-8">
+            <p className="text-white/70 mb-8">
               Твой аккаунт активирован и готов к использованию
             </p>
 
             {/* Fork: 3 options */}
             <div className="space-y-3">
               {/* Option 1: Open in main browser (primary) */}
-              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-300/20">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Globe className="w-5 h-5 text-primary" />
+                  <div className="p-2 rounded-lg bg-amber-500/10">
+                    <Globe className="w-5 h-5 text-amber-300" />
                   </div>
                   <div className="text-left">
-                    <p className="font-medium text-sm">Рекомендуем</p>
-                    <p className="text-xs text-muted-foreground">Открой в Safari или Chrome</p>
+                    <p className="font-medium text-sm text-white">Рекомендуем</p>
+                    <p className="text-xs text-white/60">Открой в Safari или Chrome</p>
                   </div>
                 </div>
                 <Button
                   onClick={() => {
-                    // Copy URL to clipboard for easy pasting
                     const url = `${window.location.origin}/auth`;
                     navigator.clipboard?.writeText(url);
                     window.open(url, '_blank');
                   }}
-                  className="w-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground"
+                  className="w-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-95 text-white font-medium shadow-[0_0_24px_rgba(249,115,22,0.25)] hover:shadow-[0_0_32px_rgba(249,115,22,0.4)] border border-orange-400/20"
                 >
                   <Globe className="w-4 h-4 mr-2" />
                   Открыть в браузере
@@ -98,7 +100,7 @@ export default function EmailConfirmed() {
                 <Button
                   variant="outline"
                   onClick={() => navigate('/install')}
-                  className="w-full border-border/50 text-foreground hover:bg-accent h-12"
+                  className="w-full rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white h-12"
                 >
                   <Smartphone className="w-4 h-4 mr-2" />
                   Установить приложение
@@ -109,15 +111,15 @@ export default function EmailConfirmed() {
               <Button
                 variant="ghost"
                 onClick={() => navigate('/auth')}
-                className="w-full text-muted-foreground hover:text-foreground h-12"
+                className="w-full text-white/70 hover:text-white hover:bg-white/10 h-12 rounded-full"
               >
                 <LogIn className="w-4 h-4 mr-2" />
                 Войти здесь
               </Button>
             </div>
 
-            <p className="text-xs text-muted-foreground mt-6 px-4">
-              💡 Если ты открыл эту страницу из почтового приложения, вернись в основной браузер (Safari/Chrome) для входа
+            <p className="text-xs text-white/50 mt-6 px-4">
+              Если ты открыл эту страницу из почтового приложения, вернись в основной браузер (Safari/Chrome) для входа
             </p>
           </div>
         </Card>

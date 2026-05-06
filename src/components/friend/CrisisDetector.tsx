@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Phone, Heart, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Heart, X } from "lucide-react";
+import { useI18n } from "@/hooks/useI18n";
 
 interface CrisisDetectorProps {
   open: boolean;
@@ -11,7 +11,8 @@ interface CrisisDetectorProps {
 const CRISIS_WORDS = [
   "суицид", "убить себя", "не хочу жить", "конец", "покончить",
   "самоубийство", "уйти из жизни", "хочу умереть", "лучше бы меня не было",
-  "больше не могу", "невыносимо", "хочу исчезнуть"
+  "больше не могу", "невыносимо", "хочу исчезнуть",
+  "suicide", "kill myself", "want to die", "end my life",
 ];
 
 export function detectCrisis(text: string): boolean {
@@ -20,7 +21,7 @@ export function detectCrisis(text: string): boolean {
 }
 
 export function CrisisDetectorModal({ open, onClose }: CrisisDetectorProps) {
-  const navigate = useNavigate();
+  const { t } = useI18n();
 
   return (
     <AnimatePresence>
@@ -41,12 +42,12 @@ export function CrisisDetectorModal({ open, onClose }: CrisisDetectorProps) {
             className="fixed left-1/2 top-1/2 z-50 w-[90%] max-w-md -translate-x-1/2 -translate-y-1/2"
           >
             <div className="relative rounded-3xl bg-gradient-to-br from-rose-950/95 via-slate-900/95 to-slate-950/95 border border-rose-500/30 shadow-2xl overflow-hidden">
-              {/* Top border gradient */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500" />
               
               <button
                 onClick={onClose}
                 className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -63,33 +64,24 @@ export function CrisisDetectorModal({ open, onClose }: CrisisDetectorProps) {
                 
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-white">
-                    Ты сейчас не один 💚
+                    {t('crisis.detector.title')}
                   </h3>
                   <p className="text-white/70 text-base">
-                    Я вижу, что тебе сейчас очень тяжело. Пожалуйста, поговори с кем-то, кто может помочь прямо сейчас.
+                    {t('crisis.detector.message')}
                   </p>
                 </div>
                 
                 <div className="space-y-3 pt-2">
                   <Button
-                    onClick={() => navigate("/crisis")}
+                    onClick={onClose}
                     className="w-full bg-rose-500 hover:bg-rose-600 text-white font-medium py-6 rounded-2xl text-base"
                   >
-                    <Phone className="w-5 h-5 mr-2" />
-                    Горячие линии помощи
-                  </Button>
-                  
-                  <Button
-                    onClick={onClose}
-                    variant="ghost"
-                    className="w-full text-white/60 hover:text-white hover:bg-white/10 py-4 rounded-2xl"
-                  >
-                    Продолжить общение с Другом
+                    {t('crisis.detector.continueBtn')}
                   </Button>
                 </div>
                 
                 <p className="text-xs text-white/65">
-                  Телефон доверия: 8-800-2000-122 (бесплатно, 24/7)
+                  {t('crisis.detector.footer')}
                 </p>
               </div>
             </div>

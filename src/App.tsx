@@ -8,14 +8,21 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-ro
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
+import { LegalModalProvider } from "@/components/legal/LegalModalProvider";
 import { BottomDock } from "./components/navigation/BottomDock";
 import { TopHeader } from "./components/navigation/TopHeader";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "./components/PageTransition";
+// JivaFloatingButton removed — Hero card on home is the single Jiva entry point
+
 
 import { PWAInstallPrompt } from "./components/pwa/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "./components/pwa/PWAUpdatePrompt";
+import { CookieBanner } from "./components/cookies/CookieBanner";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { ReConsentModal } from "./components/legal/ReConsentModal";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useDeviceFingerprint } from "@/hooks/useDeviceFingerprint";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Crisis from "./pages/Crisis";
@@ -39,15 +46,16 @@ const AdminDatabase = lazy(() => import("./pages/admin/Database"));
 const AdminLogs = lazy(() => import("./pages/admin/Logs"));
 const AdminPricing = lazy(() => import("./pages/admin/Pricing"));
 const AdminAiMemory = lazy(() => import("./pages/admin/AiMemory"));
+const AdminIncidents = lazy(() => import("./pages/admin/Incidents"));
+const AdminNotifications = lazy(() => import("./pages/admin/Notifications"));
 
-const Navigator = lazy(() => import("./pages/Navigator"));
 const Diary = lazy(() => import("./pages/Diary"));
-const SMERDiary = lazy(() => import("./pages/SMERDiary"));
 const CrisisJournal = lazy(() => import("./pages/CrisisJournal"));
 
 const Settings = lazy(() => import("./pages/Settings"));
 const Premium = lazy(() => import("./pages/Premium"));
 const AiChat = lazy(() => import("./pages/AiChat"));
+
 
 // Legal pages
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
@@ -55,6 +63,8 @@ const Offer = lazy(() => import("./pages/legal/Offer"));
 const Refund = lazy(() => import("./pages/legal/Refund"));
 const Disclaimer = lazy(() => import("./pages/legal/Disclaimer"));
 const SellerInfo = lazy(() => import("./pages/legal/SellerInfo"));
+const Consent = lazy(() => import("./pages/legal/Consent"));
+const Cookies = lazy(() => import("./pages/legal/Cookies"));
 const About = lazy(() => import("./pages/About"));
 const Install = lazy(() => import("./pages/Install"));
 const EmailConfirmed = lazy(() => import("./pages/EmailConfirmed"));
@@ -74,6 +84,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  usePushNotifications();
+  useDeviceFingerprint();
+  
   const publicRoutes = [
     "/",
     "/auth",
@@ -87,12 +100,14 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     "/refund",
     "/disclaimer",
     "/seller",
+    "/consent",
+    "/cookies",
     "/install",
     "/about",
   ];
 
   // Routes that should have immersive layout (no BottomDock, no TopHeader)
-  const immersiveRoutes = ["/art-therapy", "/diary", "/diary/sos", "/navigator", "/community", "/settings", "/smer", "/ai-chat"];
+  const immersiveRoutes = ["/art-therapy", "/diary", "/diary/sos", "/community", "/settings", "/ai-chat"];
 
   // Handle SPA redirect from 404.html
   useEffect(() => {
@@ -185,6 +200,7 @@ const App = () => (
           <PWAUpdatePrompt />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
+              <LegalModalProvider>
               <AppLayout>
                 <AnimatePresence mode="wait">
                   <Suspense fallback={<LoadingScreen />}>
@@ -203,10 +219,9 @@ const App = () => (
                       {/* Protected routes - require authentication */}
                       <Route path="/app" element={<ProtectedRoute><PageTransition><Home /></PageTransition></ProtectedRoute>} />
                       
-                      <Route path="/navigator" element={<ProtectedRoute><PageTransition><Navigator /></PageTransition></ProtectedRoute>} />
                       <Route path="/diary" element={<ProtectedRoute><PageTransition><Diary /></PageTransition></ProtectedRoute>} />
                       <Route path="/diary/sos" element={<ProtectedRoute><PageTransition><CrisisJournal /></PageTransition></ProtectedRoute>} />
-                      <Route path="/smer" element={<ProtectedRoute><PageTransition><SMERDiary /></PageTransition></ProtectedRoute>} />
+                      
                       <Route path="/settings" element={<ProtectedRoute><PageTransition><Settings /></PageTransition></ProtectedRoute>} />
                       <Route path="/premium" element={<ProtectedRoute><PageTransition><Premium /></PageTransition></ProtectedRoute>} />
                       <Route path="/community" element={<ProtectedRoute><PageTransition><Community /></PageTransition></ProtectedRoute>} />
@@ -215,6 +230,7 @@ const App = () => (
                       <Route path="/payment-success" element={<ProtectedRoute><PageTransition><PaymentSuccess /></PageTransition></ProtectedRoute>} />
                       <Route path="/payment/success" element={<ProtectedRoute><PageTransition><PaymentSuccess /></PageTransition></ProtectedRoute>} />
                       <Route path="/ai-chat" element={<ProtectedRoute><AiChat /></ProtectedRoute>} />
+                      
                       
                       {/* Admin routes */}
                       <Route path="/admin" element={<ProtectedRoute><PageTransition><AdminDashboard /></PageTransition></ProtectedRoute>} />
@@ -226,6 +242,8 @@ const App = () => (
                       <Route path="/admin/logs" element={<ProtectedRoute><PageTransition><AdminLogs /></PageTransition></ProtectedRoute>} />
                       <Route path="/admin/pricing" element={<ProtectedRoute><PageTransition><AdminPricing /></PageTransition></ProtectedRoute>} />
                       <Route path="/admin/ai-memory" element={<ProtectedRoute><PageTransition><AdminAiMemory /></PageTransition></ProtectedRoute>} />
+                      <Route path="/admin/incidents" element={<ProtectedRoute><PageTransition><AdminIncidents /></PageTransition></ProtectedRoute>} />
+                      <Route path="/admin/notifications" element={<ProtectedRoute><PageTransition><AdminNotifications /></PageTransition></ProtectedRoute>} />
                       
                       {/* Legal pages */}
                       <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
@@ -233,6 +251,8 @@ const App = () => (
                       <Route path="/refund" element={<PageTransition><Refund /></PageTransition>} />
                       <Route path="/disclaimer" element={<PageTransition><Disclaimer /></PageTransition>} />
                       <Route path="/seller" element={<PageTransition><SellerInfo /></PageTransition>} />
+                      <Route path="/consent" element={<PageTransition><Consent /></PageTransition>} />
+                      <Route path="/cookies" element={<PageTransition><Cookies /></PageTransition>} />
                       <Route path="/about" element={<PageTransition><About /></PageTransition>} />
                       <Route path="/install" element={<PageTransition><Install /></PageTransition>} />
                       
@@ -242,6 +262,9 @@ const App = () => (
                   </Suspense>
                 </AnimatePresence>
               </AppLayout>
+              <CookieBanner />
+              <ReConsentModal />
+              </LegalModalProvider>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

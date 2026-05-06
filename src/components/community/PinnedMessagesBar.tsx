@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Pin, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { parseMentions } from '@/hooks/useMentions';
+import { useI18n } from '@/hooks/useI18n';
 
 interface PinnedMessage {
   id: string;
@@ -26,6 +27,7 @@ interface PinnedMessagesBarProps {
 }
 
 export function PinnedMessagesBar({ isAdmin, onScrollToMessage }: PinnedMessagesBarProps) {
+  const { t } = useI18n();
   const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -109,7 +111,7 @@ export function PinnedMessagesBar({ isAdmin, onScrollToMessage }: PinnedMessages
             className="flex-1 min-w-0 text-left"
           >
             <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
-              {currentPinned.message.author?.display_name || 'Аноним'}
+              {currentPinned.message.author?.display_name || t('community.message.anonymous')}
               {pinnedMessages.length > 1 && (
                 <span className="ml-2 text-amber-600/60 dark:text-amber-400/60">
                   ({currentIndex + 1}/{pinnedMessages.length})
@@ -129,7 +131,7 @@ export function PinnedMessagesBar({ isAdmin, onScrollToMessage }: PinnedMessages
                 onClick={() => setCurrentIndex((currentIndex + 1) % pinnedMessages.length)}
                 className="h-7 px-2 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/20"
               >
-                Далее
+                {t('community.pinned.next')}
               </Button>
             )}
             

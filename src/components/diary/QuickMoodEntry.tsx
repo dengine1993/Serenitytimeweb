@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Sun } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useI18n } from "@/hooks/useI18n";
@@ -14,15 +15,17 @@ interface MoodOption {
   labelKey: string;
 }
 
+// Порядок: от тяжёлых эмоций к лёгким — мы принимаем боль первой,
+// а не предлагаем «выбери радость». Психологически корректнее.
 const quickMoods: MoodOption[] = [
-  { value: "joy", emoji: "☀️", labelKey: "diary.moods.joy" },
-  { value: "calm", emoji: "☁️", labelKey: "diary.moods.calm" },
-  { value: "neutral", emoji: "😐", labelKey: "diary.moods.neutral" },
-  { value: "anxiety", emoji: "🌊", labelKey: "diary.moods.anxiety" },
   { value: "sadness", emoji: "💧", labelKey: "diary.moods.sadness" },
+  { value: "anxiety", emoji: "🌊", labelKey: "diary.moods.anxiety" },
+  { value: "fear", emoji: "😨", labelKey: "diary.moods.fear" },
   { value: "anger", emoji: "🔥", labelKey: "diary.moods.anger" },
   { value: "fatigue", emoji: "🌙", labelKey: "diary.moods.fatigue" },
-  { value: "fear", emoji: "😨", labelKey: "diary.moods.fear" },
+  { value: "neutral", emoji: "😐", labelKey: "diary.moods.neutral" },
+  { value: "calm", emoji: "☁️", labelKey: "diary.moods.calm" },
+  { value: "joy", emoji: "☀️", labelKey: "diary.moods.joy" },
 ];
 
 const AUTO_SAVE_DELAY = 800;
@@ -75,6 +78,10 @@ export function QuickMoodEntry({ onComplete, compact = false }: QuickMoodEntryPr
 
     if (success) {
       setSaved(true);
+      toast.success(
+        language === 'ru' ? 'Записано в дневник' : 'Saved to journal',
+        { duration: 2000 }
+      );
       setTimeout(() => {
         setSaved(false);
         setSelectedMood(null);
@@ -87,7 +94,7 @@ export function QuickMoodEntry({ onComplete, compact = false }: QuickMoodEntryPr
       toast.error(t('errors.generic'));
       return false;
     }
-  }, [user, saveEntry, onComplete, t]);
+  }, [user, saveEntry, onComplete, t, language]);
 
   const handleMoodSelect = useCallback((mood: MoodType) => {
     setSelectedMood(mood);
@@ -167,7 +174,7 @@ export function QuickMoodEntry({ onComplete, compact = false }: QuickMoodEntryPr
           >
             {/* Header */}
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sun className="w-4 h-4 text-amber-400" strokeWidth={2.2} />
               <span className="text-sm font-medium text-white/90">
                 {language === 'ru' ? 'Как ты сейчас?' : 'How are you now?'}
               </span>

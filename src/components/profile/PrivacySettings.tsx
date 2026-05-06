@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Shield, Trash2, MessageCircle, Users, Lock, Globe, Ban, Unlock, Flag } from "lucide-react";
+import { Shield, Trash2, MessageCircle, Users, Lock, Globe, Ban, Unlock, UserCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// AlertDialog imports removed — спец.категория ПДн больше не используется
 import { useI18n } from "@/hooks/useI18n";
 import { useAuth } from "@/hooks/useAuth";
 import { useFriends } from "@/hooks/useFriends";
 import { supabase } from "@/integrations/supabase/client";
 import { DeleteAccountModal } from "./DeleteAccountModal";
-import { UserReportModal } from "@/components/community/UserReportModal";
+
 import AiMemorySettings from "./AiMemorySettings";
+import { CookieSettings } from "@/components/settings/CookieSettings";
 import { toast } from "sonner";
 
 type PrivacySetting = 'all' | 'friends' | 'nobody';
@@ -25,34 +28,69 @@ export function PrivacySettings() {
   const isRu = language === 'ru';
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [reportUserId, setReportUserId] = useState<string | null>(null);
-  const [reportUserName, setReportUserName] = useState('');
   const [privacySetting, setPrivacySetting] = useState<PrivacySetting>('all');
   const [friendRequestSetting, setFriendRequestSetting] = useState<FriendRequestSetting>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [nameToJivaAt, setNameToJivaAt] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string>('');
+  const [nameTogglePending, setNameTogglePending] = useState(false);
 
   // Load current settings
   useEffect(() => {
     const loadSettings = async () => {
       if (!user) return;
-      
+
       const { data } = await supabase
         .from('profiles')
-        .select('allow_private_messages, allow_friend_requests')
+        .select('allow_private_messages, allow_friend_requests, name_to_jiva_consent_at, display_name')
         .eq('user_id', user.id)
         .single();
-      
+
       if (data?.allow_private_messages) {
         setPrivacySetting(data.allow_private_messages as PrivacySetting);
       }
       if (data?.allow_friend_requests) {
         setFriendRequestSetting(data.allow_friend_requests as FriendRequestSetting);
       }
+      setNameToJivaAt(data?.name_to_jiva_consent_at ?? null);
+      setDisplayName((data?.display_name ?? '').trim());
       setIsLoading(false);
     };
-    
+
     loadSettings();
   }, [user]);
+
+  const handleNameToJivaToggle = async (next: boolean) => {
+    if (!user) return;
+    setNameTogglePending(true);
+    const newValue = next ? new Date().toISOString() : null;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name_to_jiva_consent_at: newValue })
+        .eq('user_id', user.id);
+      if (error) throw error;
+
+      await supabase.from('pdn_audit_log').insert({
+        user_id: user.id,
+        event_type: next ? 'name_to_jiva_consent_given' : 'name_to_jiva_consent_withdrawn',
+        metadata: { source: 'settings' },
+      });
+
+      setNameToJivaAt(newValue);
+      toast.success(
+        next
+          ? (isRu ? 'Джива будет обращаться к тебе по имени со следующего сообщения' : 'Jiva will address you by name from the next message')
+          : (isRu ? 'Джива снова будет обращаться нейтрально' : 'Jiva will address you neutrally again')
+      );
+    } catch (e) {
+      console.error('toggle name_to_jiva failed', e);
+      toast.error(isRu ? 'Не удалось сохранить' : 'Failed to save');
+    } finally {
+      setNameTogglePending(false);
+    }
+  };
+
 
   const handlePrivacyChange = async (value: PrivacySetting) => {
     if (!user) return;
@@ -97,10 +135,6 @@ export function PrivacySettings() {
     }
   };
 
-  const openReportModal = (userId: string, userName: string) => {
-    setReportUserId(userId);
-    setReportUserName(userName);
-  };
 
   return (
     <motion.div
@@ -300,17 +334,6 @@ export function PrivacySettings() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openReportModal(
-                          blocked.friend_id, 
-                          blocked.blocked_profile?.display_name || blocked.blocked_profile?.username || 'Пользователь'
-                        )}
-                        className="shrink-0 text-destructive hover:text-destructive"
-                      >
-                        <Flag className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
                         onClick={() => handleUnblock(blocked.friend_id)}
                         className="shrink-0"
                       >
@@ -320,6 +343,51 @@ export function PrivacySettings() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Обращение Дживы по имени (opt-in) */}
+      <Card className="glass-card p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+            <UserCircle2 className="w-6 h-6 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-foreground">
+                  {isRu ? 'Обращение Дживы по имени' : 'Jiva addresses you by name'}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {isRu
+                    ? 'Если включено — Джива обращается так, как ты указал(а) в профиле. Если выключено — нейтрально («друг»).'
+                    : 'When enabled, Jiva uses the name from your profile. When off, she stays neutral ("friend").'}
+                </p>
+              </div>
+              <Switch
+                checked={!!nameToJivaAt}
+                onCheckedChange={handleNameToJivaToggle}
+                disabled={nameTogglePending || isLoading}
+                aria-label={isRu ? 'Обращение по имени' : 'Address by name'}
+              />
+            </div>
+            {nameToJivaAt && (
+              <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20">
+                <span className="text-base">💬</span>
+                <p className="text-xs text-foreground/80">
+                  {displayName ? (
+                    isRu
+                      ? <>Сейчас Джива пишет: <span className="font-medium">«Привет, {displayName}!»</span></>
+                      : <>Right now Jiva writes: <span className="font-medium">"Hi, {displayName}!"</span></>
+                  ) : (
+                    isRu
+                      ? 'Имя в профиле пустое — Джива пока обращается нейтрально. Заполни поле «Как тебе обращаться» в профиле.'
+                      : 'Profile name is empty — Jiva stays neutral for now. Fill in "How to address you" in your profile.'
+                  )}
+                </p>
               </div>
             )}
           </div>
@@ -337,7 +405,7 @@ export function PrivacySettings() {
               {isRu ? 'Удалить аккаунт' : 'Delete Account'}
             </h3>
             <p className="text-sm text-muted-foreground mt-1 mb-4">
-              {isRu 
+              {isRu
                 ? 'Навсегда удалить аккаунт и все данные. Это действие необратимо.'
                 : 'Permanently delete your account and all data. This action cannot be undone.'
               }
@@ -353,17 +421,11 @@ export function PrivacySettings() {
         </div>
       </Card>
 
+      <CookieSettings />
+
       <DeleteAccountModal
         open={showDeleteModal}
         onOpenChange={setShowDeleteModal}
-      />
-
-      {/* User Report Modal */}
-      <UserReportModal
-        isOpen={!!reportUserId}
-        onClose={() => setReportUserId(null)}
-        userId={reportUserId || ''}
-        userName={reportUserName}
       />
     </motion.div>
   );

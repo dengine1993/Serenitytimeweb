@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import AnimatedShaderBackground from "@/components/ui/animated-shader-background";
+const AnimatedShaderBackground = lazy(() => import("@/components/ui/animated-shader-background"));
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Check } from "lucide-react";
@@ -73,7 +73,11 @@ const GroundingExercise = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {!simpleEffects && <AnimatedShaderBackground />}
+      {!simpleEffects && (
+        <Suspense fallback={null}>
+          <AnimatedShaderBackground />
+        </Suspense>
+      )}
       {simpleEffects && (
         <div
           className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900"

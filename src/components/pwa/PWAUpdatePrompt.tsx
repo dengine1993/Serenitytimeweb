@@ -1,56 +1,41 @@
-import { useEffect, useCallback } from 'react';
-import { useRegisterSW } from 'virtual:pwa-register/react';
-import { toast } from 'sonner';
+import { lazy, Suspense, useEffect } from 'react';
+import { isNativePlatform } from '@/lib/platform';
 
-// Очистка всех кешей при критичном обновлении
-async function clearAllCaches() {
-  try {
-    const cacheNames = await caches.keys();
-    await Promise.all(cacheNames.map(name => caches.delete(name)));
-    console.log('Все кеши очищены:', cacheNames);
-  } catch (error) {
-    console.error('Ошибка очистки кешей:', error);
-  }
-}
+/**
+ * Один репозиторий → две сборки:
+ *   - `vite build`               → web (Timeweb), PWA включён.
+ *   - `vite build --mode capacitor` → native, PWA-плагин выключен в vite.config.
+ *
+ * `import.meta.env.MODE` подставляется на этапе бандлинга, так что в Capacitor-
+ * сборке Rollup tree-shake'ает ветку с `virtual:pwa-register/react` и
+ * виртуальный модуль не запрашивается.
+ */
+const isCapacitorBuild = import.meta.env.MODE === 'capacitor';
+
+const PWAUpdatePromptWeb = isCapacitorBuild
+  ? null
+  : lazy(() => import('./PWAUpdatePrompt.web'));
 
 export function PWAUpdatePrompt() {
-  const {
-    needRefresh: [needRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegistered(r) {
-      console.log('SW зарегистрирован:', r);
-      if (r) {
-        // Проверяем обновления каждые 5 минут
-        setInterval(() => r.update(), 5 * 60 * 1000);
-        
-        // Проверяем при возвращении в приложение
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') {
-            r.update();
-          }
-        });
-        
-        // Проверяем при восстановлении сети
-        window.addEventListener('online', () => r.update());
-      }
-    },
-    onRegisterError(error) {
-      console.error('SW ошибка регистрации:', error);
-    },
-  });
-
-  const handleUpdate = useCallback(async () => {
-    toast.info('Обновление приложения...', { duration: 2000 });
-    await clearAllCaches();
-    updateServiceWorker(true);
-  }, [updateServiceWorker]);
+  const native = isNativePlatform();
 
   useEffect(() => {
-    if (needRefresh) {
-      handleUpdate();
+    if (!native) return;
+    // Снести любые ранее зарегистрированные SW + кэши в нативке
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      });
     }
-  }, [needRefresh, handleUpdate]);
+    if ('caches' in window) {
+      caches.keys().then((names) => names.forEach((n) => caches.delete(n)));
+    }
+  }, [native]);
 
-  return null;
+  if (native || isCapacitorBuild || !PWAUpdatePromptWeb) return null;
+  return (
+    <Suspense fallback={null}>
+      <PWAUpdatePromptWeb />
+    </Suspense>
+  );
 }

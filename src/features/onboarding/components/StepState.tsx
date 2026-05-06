@@ -7,10 +7,10 @@ interface StepStateProps {
 }
 
 const STATES = [
-    { id: "storm", label: "Шторм", icon: Wind, desc: "Паника, хаос мыслей", color: "from-cyan-500 to-blue-600" },
-    { id: "fog", label: "Туман", icon: CloudRain, desc: "Апатия, выгорание", color: "from-slate-400 to-slate-600" },
-    { id: "void", label: "Пустота", icon: Ghost, desc: "Одиночество, грусть", color: "from-indigo-400 to-violet-600" },
-    { id: "tension", label: "Напряжение", icon: Zap, desc: "Стресс, давление", color: "from-amber-400 to-orange-600" },
+    { id: "storm", label: "Шторм", icon: Wind, desc: "Внутри буря, мысли несутся", color: "from-cyan-500 to-blue-600" },
+    { id: "fog", label: "Туман", icon: CloudRain, desc: "Не видно дороги, всё размыто", color: "from-slate-400 to-slate-600" },
+    { id: "void", label: "Пустота", icon: Ghost, desc: "Тихо и одиноко внутри", color: "from-indigo-400 to-violet-600" },
+    { id: "tension", label: "Напряжение", icon: Zap, desc: "Давит, нет воздуха", color: "from-amber-400 to-orange-600" },
 ];
 
 export const StepState = ({ onNext }: StepStateProps) => {

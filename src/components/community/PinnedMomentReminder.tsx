@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '@/hooks/useI18n';
 
 export function PinnedMomentReminder() {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   return (
     <motion.button
@@ -17,10 +19,10 @@ export function PinnedMomentReminder() {
       </div>
       <div className="flex-1 text-left">
         <p className="text-sm font-medium text-foreground">
-          Поделись моментом дня
+          {t('community.pinned.shareMoment')}
         </p>
         <p className="text-xs text-muted-foreground">
-          Один раз в день на Главной
+          {t('community.pinned.onceADay')}
         </p>
       </div>
       <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />

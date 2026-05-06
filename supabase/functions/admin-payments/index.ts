@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, sanitizeSearch } from "../_shared/admin.ts";
 
 type Mode = "list" | "extend" | "cancel" | "refund" | "grant";
 
@@ -221,7 +217,8 @@ serve(async (req) => {
       if (lb.provider && lb.provider !== "all") q = q.eq("payment_provider", lb.provider);
       if (lb.from) q = q.gte("created_at", lb.from);
       if (lb.to) q = q.lte("created_at", lb.to);
-      if (lb.search) q = q.or(`external_id.ilike.%${lb.search}%,user_id.ilike.%${lb.search}%`);
+      const safeSearch = sanitizeSearch(lb.search);
+      if (safeSearch) q = q.or(`external_id.ilike.%${safeSearch}%,user_id.ilike.%${safeSearch}%`);
       return q.order("created_at", { ascending: false });
     };
     const buildPaymentsQuery = () => {
@@ -230,9 +227,10 @@ serve(async (req) => {
       if (lb.provider && lb.provider !== "all") q = q.eq("provider", lb.provider);
       if (lb.from) q = q.gte("created_at", lb.from);
       if (lb.to) q = q.lte("created_at", lb.to);
-      if (lb.search) {
+      const safeP = sanitizeSearch(lb.search);
+      if (safeP) {
         q = q.or(
-          `external_id.ilike.%${lb.search}%,yookassa_payment_id.ilike.%${lb.search}%,user_id.ilike.%${lb.search}%`
+          `external_id.ilike.%${safeP}%,yookassa_payment_id.ilike.%${safeP}%,user_id.ilike.%${safeP}%`
         );
       }
       return q.order("created_at", { ascending: false });
@@ -243,7 +241,7 @@ serve(async (req) => {
     // Stats: aggregate over ALL data (not page-bound)
     const [pageRes, subsAllRes, paymentsAllRes] = await Promise.all([
       pageQuery,
-      supabase.from("subscriptions").select("user_id, plan, status, current_period_end, billing_interval"),
+      supabase.from("subscriptions").select("user_id, plan, status, current_period_end, billing_interval, price_rub"),
       supabase.from("payments").select("amount, status, refunded_at, created_at"),
     ]);
 
@@ -289,16 +287,32 @@ serve(async (req) => {
       .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const netRevenue = grossRevenue - refundedAmount;
 
-    // MRR — sum of monthly subscription prices (rough estimate from recent payments per active sub user)
-    // Simple approach: count active monthly subs * average monthly payment amount
-    const activeMonthly = subsAll.filter((s) =>
-      s.status === "active" && s.plan !== "free" && (s.billing_interval === "month" || !s.billing_interval) &&
+    // MRR — корректный расчёт:
+    // 1) Для активных подписок берём price_rub. Месячные — как есть, годовые — /12.
+    // 2) Если price_rub не задан — фоллбэк на средний месячный платёж по succeeded.
+    const activeSubs2 = subsAll.filter((s) =>
+      s.status === "active" && s.plan !== "free" &&
       (!s.current_period_end || new Date(s.current_period_end).getTime() > now)
     );
     const succeededPays = paysAll.filter((p) => p.status === "succeeded");
-    const avgCheck = succeededPays.length > 0
-      ? grossRevenue / succeededPays.length : 0;
-    const mrr = Math.round(activeMonthly.length * avgCheck);
+    const avgCheck = succeededPays.length > 0 ? grossRevenue / succeededPays.length : 0;
+
+    let mrr = 0;
+    let unknownPriceCount = 0;
+    for (const s of activeSubs2) {
+      const price = Number(s.price_rub);
+      if (!Number.isFinite(price) || price <= 0) {
+        unknownPriceCount += 1;
+        continue;
+      }
+      const interval = (s.billing_interval as string | null) ?? 'month';
+      mrr += interval === 'year' ? price / 12 : price;
+    }
+    // Фоллбэк для подписок без price_rub: усреднённый месячный чек
+    if (unknownPriceCount > 0) {
+      mrr += unknownPriceCount * avgCheck;
+    }
+    mrr = Math.round(mrr);
 
     return json({
       rows: enriched,

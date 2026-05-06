@@ -9,12 +9,11 @@ const About = () => {
   return (
     <>
       <SEO 
-        title="О приложении | Безмятежные"
-        description="История создания приложения Безмятежные — инструменты для тех, кто знает тревогу изнутри"
+        title="О приложении | Восход"
+        description="История проекта Восход — пространство для тех, кто хочет расти каждый день и становиться лучшей версией себя."
       />
       
       <div className="min-h-screen bg-background">
-        {/* Header */}
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border/40">
           <div className="container max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
             <Button
@@ -29,10 +28,8 @@ const About = () => {
           </div>
         </header>
 
-        {/* Content */}
         <main className="container max-w-2xl mx-auto px-4 py-8">
           <div className="space-y-8">
-            {/* Greeting */}
             <div className="text-center space-y-4">
               <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
                 <Heart className="w-10 h-10 text-primary" />
@@ -40,65 +37,53 @@ const About = () => {
               <h2 className="text-2xl font-bold text-foreground">Привет</h2>
             </div>
 
-            {/* Story */}
             <div className="space-y-6 text-foreground/90 leading-relaxed">
               <p>
                 Меня зовут <strong className="text-foreground">Алексей</strong>.
               </p>
 
               <p>
-                Несколько лет я жил с постоянной тревогой. Панические атаки, бесконечные 
-                поиски симптомов, непонимание со стороны окружающих... К этому добавлялись 
-                Аспергер и СДВГ — мир казался слишком громким, хаотичным и непонятным.
-              </p>
-
-              <p>
-                Я перепробовал многое: КПТ, медикаментозная терапия, различные техники. 
-                Некоторые вещи помогали, но ничего не было собрано в одном месте и создано 
-                именно для таких, как я — людей, которые знают эти симптомы изнутри.
+                Я делал «Восход» для людей, которые хотят расти — каждый день делать
+                маленький шаг к лучшей версии себя. Не ждать «когда станет легче»,
+                а возвращаться к себе утром за утром и двигаться вперёд в своём темпе.
               </p>
 
               <p className="text-lg font-medium text-foreground">
-                Мой опыт вдохновил меня создать «Безмятежные».
+                Восход — это место, куда можно прийти как есть.
               </p>
 
               <div className="p-6 rounded-2xl bg-accent/30 border border-border/30 space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Это не медицинское приложение и не замена врачу. Это инструменты, 
-                  основанные на том, через что я прошёл и что мне было так необходимо 
-                  в те времена:
+                  Что внутри:
                 </p>
                 
                 <ul className="space-y-3 text-foreground/90">
                   <li className="flex items-start gap-3">
                     <span className="text-primary">—</span>
-                    <span>разобраться в симптомах и знаниях о тревоге (навигатор)</span>
+                    <span>Джива — AI-Друг, с которой можно думать вслух и разбирать день</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-primary">—</span>
-                    <span>получить эмпатичную поддержку (Сообщество и Джива — наш AI-психолог)</span>
+                    <span>Сообщество людей, которые тоже идут вперёд — без оценок и советов сверху</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-primary">—</span>
-                    <span>выразить чувства, когда нет слов (арт-терапия)</span>
+                    <span>«Образ дня» — выразить то, для чего нет слов</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-primary">—</span>
-                    <span>находить маленькие радости каждый день (моменты хорошего)</span>
+                    <span>Лента «Маленькие Восходы» — фиксировать шаги вперёд каждый день</span>
                   </li>
                 </ul>
               </div>
 
               <p>
-                Я создал его для тебя — если ты сейчас там, где был я.
+                Если хочешь расти и не оставаться один на этом пути — добро пожаловать.
               </p>
 
               <div className="text-center space-y-4 pt-4">
-                <p className="text-xl font-medium text-foreground">
-                  Ты не один.
-                </p>
                 <p className="text-xl font-medium text-primary">
-                  Вместе справимся.
+                  Каждое утро — твой новый шаг.
                 </p>
                 <p className="text-lg text-foreground/80 flex items-center justify-center gap-2">
                   Алексей <span className="text-primary">💙</span>

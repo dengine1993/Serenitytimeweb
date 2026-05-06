@@ -9,11 +9,12 @@ export interface AiMessage {
   content: string;
   created_at: string;
   pending?: boolean;
+  metadata?: { kind?: string } | null;
 }
 
 const JIVA_GREETING_RU = `Привет ❤️
 
-Я — Jiva, тёплое и заботливое сердце «Безмятежных».
+Я — Джива, тёплое и заботливое сердце «Восхода».
 
 Я здесь, чтобы выслушать тебя, понять и быть рядом — в любой момент, когда тяжело, тревожно или просто хочется поговорить.
 
@@ -23,7 +24,7 @@ const JIVA_GREETING_RU = `Привет ❤️
 
 const JIVA_GREETING_EN = `Hi ❤️
 
-I'm Jiva, the warm and caring heart of Serenity.
+I'm Jiva, the warm and caring heart of New Dawn.
 
 I'm here to listen, understand, and be with you — anytime it gets heavy, anxious, or you just want to talk.
 
@@ -58,14 +59,24 @@ export function useAiChat() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [messagesRemaining, setMessagesRemaining] = useState<number | null>(null);
+  const [dailyLimit, setDailyLimit] = useState<number | null>(null);
+  const [jivaMode, setJivaMode] = useState<'fast' | 'deep' | null>(null);
+  const [deepMessagesLeft, setDeepMessagesLeft] = useState<number>(0);
   const [freeLimitReached, setFreeLimitReached] = useState(false);
   const [freeLimitReason, setFreeLimitReason] = useState<
-    'PREMIUM_EXPIRED' | 'FREE_LIMIT_REACHED' | null
+    | 'PREMIUM_EXPIRED'
+    | 'FREE_LIMIT_REACHED'
+    | 'FREE_DAILY_LIMIT_REACHED'
+    | 'PREMIUM_DAILY_LIMIT_REACHED'
+    | null
   >(null);
   const [inGrace, setInGrace] = useState(false);
   const [graceDaysLeft, setGraceDaysLeft] = useState<number>(0);
   const [hadPremiumEver, setHadPremiumEver] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // Авто-открытие последнего чата только один раз за сессию хука,
+  // чтобы после явного newChat() не «прыгало» обратно в старый.
+  const autoOpenedRef = useRef(false);
 
   const loadChats = useCallback(async () => {
     if (!user) return;
@@ -75,7 +86,12 @@ export function useAiChat() {
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(50);
-    setChats(data ?? []);
+    const list = data ?? [];
+    setChats(list);
+    if (!autoOpenedRef.current && list.length > 0) {
+      autoOpenedRef.current = true;
+      setActiveChatId((prev) => prev ?? list[0].id);
+    }
   }, [user]);
 
   const loadMessages = useCallback(
@@ -84,7 +100,7 @@ export function useAiChat() {
       setLoadingHistory(true);
       const { data } = await supabase
         .from('ai_messages')
-        .select('id, role, content, created_at')
+        .select('id, role, content, created_at, metadata')
         .eq('chat_id', chatId)
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
@@ -146,18 +162,28 @@ export function useAiChat() {
             message?: string;
             messagesRemaining?: number;
             hadPremiumEver?: boolean;
+            jivaMode?: 'fast' | 'deep';
+            deepMessagesLeft?: number;
           } = {};
           try { payload = await res.json(); } catch { /* ignore */ }
           if (
             payload.code === 'FREE_LIMIT_REACHED' ||
-            payload.code === 'PREMIUM_EXPIRED'
+            payload.code === 'FREE_DAILY_LIMIT_REACHED' ||
+            payload.code === 'PREMIUM_EXPIRED' ||
+            payload.code === 'PREMIUM_DAILY_LIMIT_REACHED'
           ) {
             setFreeLimitReached(true);
-            setFreeLimitReason(payload.code);
+            setFreeLimitReason(payload.code as typeof freeLimitReason);
             setHadPremiumEver(!!payload.hadPremiumEver);
             setMessagesRemaining(0);
-            setIsPremium(false);
-            setInGrace(false);
+            if (payload.jivaMode) setJivaMode(payload.jivaMode);
+            if (typeof payload.deepMessagesLeft === 'number') {
+              setDeepMessagesLeft(payload.deepMessagesLeft);
+            }
+            if (payload.code !== 'PREMIUM_DAILY_LIMIT_REACHED') {
+              setIsPremium(false);
+              setInGrace(false);
+            }
             // убираем оптимистичные плейсхолдеры
             setMessages((prev) => prev.filter((m) => m.id !== tempUserId && m.id !== tempAsstId));
             return;
@@ -174,6 +200,8 @@ export function useAiChat() {
         const headerInGrace = res.headers.get('x-in-grace');
         const headerGraceDays = res.headers.get('x-grace-days-left');
         const headerHadPremium = res.headers.get('x-had-premium-ever');
+        const headerJivaMode = res.headers.get('x-jiva-mode');
+        const headerDeepMessagesLeft = res.headers.get('x-deep-messages-left');
         if (headerPremium != null) setIsPremium(headerPremium === 'true');
         if (headerInGrace != null) setInGrace(headerInGrace === 'true');
         if (headerGraceDays != null) {
@@ -184,6 +212,13 @@ export function useAiChat() {
         if (headerRemaining != null) {
           const n = Number(headerRemaining);
           if (!Number.isNaN(n) && n >= 0) setMessagesRemaining(n);
+        }
+        if (headerJivaMode === 'fast' || headerJivaMode === 'deep') {
+          setJivaMode(headerJivaMode);
+        }
+        if (headerDeepMessagesLeft != null) {
+          const n = Number(headerDeepMessagesLeft);
+          if (!Number.isNaN(n)) setDeepMessagesLeft(Math.max(0, n));
         }
 
         const reader = res.body.getReader();
@@ -212,11 +247,29 @@ export function useAiChat() {
               if (typeof j.messagesRemaining === 'number' && j.messagesRemaining >= 0) {
                 setMessagesRemaining(j.messagesRemaining);
               }
+              if (typeof j.dailyLimit === 'number') setDailyLimit(j.dailyLimit);
+              if (j.jivaMode === 'fast' || j.jivaMode === 'deep') setJivaMode(j.jivaMode);
+              if (typeof j.deepMessagesLeft === 'number') {
+                setDeepMessagesLeft(Math.max(0, j.deepMessagesLeft));
+              }
               if (j.delta) {
                 acc += j.delta;
                 setMessages((prev) =>
                   prev.map((m) => (m.id === tempAsstId ? { ...m, content: acc } : m)),
                 );
+              }
+              if (j.farewell && typeof j.farewell.content === 'string') {
+                // Джива отправила прощальный апселл вторым сообщением.
+                // Добавляем его сразу под основным ответом — фронт под ним
+                // отрисует inline-кнопки «Перейти в Premium» / «Остаться на Free».
+                const farewellMsg: AiMessage = {
+                  id: `farewell-${Date.now()}`,
+                  role: 'assistant',
+                  content: j.farewell.content,
+                  created_at: new Date().toISOString(),
+                  metadata: { kind: j.farewell.kind || 'deep_farewell_upsell' },
+                };
+                setMessages((prev) => [...prev, farewellMsg]);
               }
             } catch {
               // ignore
@@ -264,6 +317,9 @@ export function useAiChat() {
     loadingHistory,
     isPremium,
     messagesRemaining,
+    dailyLimit,
+    jivaMode,
+    deepMessagesLeft,
     freeLimitReached,
     freeLimitReason,
     inGrace,

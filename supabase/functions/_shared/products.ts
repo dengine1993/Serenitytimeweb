@@ -2,15 +2,18 @@ import { getSupabaseClient } from './db.ts';
 
 export type CurrencyCode = 'RUB';
 
-export type ProductId =
-  | 'premium_subscription_monthly'
-  | 'premium_subscription_yearly';
+export type ProductId = 'premium_subscription_monthly';
 
-export type ProductEntitlement = {
-  kind: 'subscription';
-  plan: 'premium';
-  intervalMonths: number;
-};
+export type ProductEntitlement =
+  | {
+      kind: 'subscription';
+      plan: 'premium';
+      intervalMonths: number;
+    }
+  | {
+      kind: 'jiva_extra';
+      quantity: number;
+    };
 
 export interface ProductDefinition {
   id: ProductId;
@@ -35,18 +38,6 @@ const DEFAULT_PRODUCT_CATALOG: Record<ProductId, ProductDefinition> = {
       kind: 'subscription',
       plan: 'premium',
       intervalMonths: 1,
-    },
-  },
-  premium_subscription_yearly: {
-    id: 'premium_subscription_yearly',
-    name: 'Premium Yearly Subscription',
-    description: 'Годовая подписка Premium',
-    amount: { value: 6990, currency: 'RUB' },
-    paymentType: 'subscription',
-    entitlement: {
-      kind: 'subscription',
-      plan: 'premium',
-      intervalMonths: 12,
     },
   },
 };

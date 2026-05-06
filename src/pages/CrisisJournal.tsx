@@ -97,7 +97,7 @@ export default function CrisisJournal() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDelete(session.id)}
-                    className="absolute top-3 right-12 w-7 h-7 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-3 right-3 w-8 h-8 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     aria-label={language === "ru" ? "Удалить" : "Delete"}
                   >
                     <Trash2 className="w-3.5 h-3.5" />

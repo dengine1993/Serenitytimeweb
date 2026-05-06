@@ -2,11 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { 
-  MessageCircle, 
-  Plus, 
-  Search
-} from 'lucide-react';
+import { MessageCircle, Plus, Search } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +27,6 @@ export function PrivateChatList({ onSelectConversation }: PrivateChatListProps) 
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-4 border-b border-border/40">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-foreground">Личные чаты</h2>
@@ -44,8 +39,7 @@ export function PrivateChatList({ onSelectConversation }: PrivateChatListProps) 
             <Plus className="h-5 w-5 text-primary" />
           </Button>
         </div>
-        
-        {/* Search */}
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -57,8 +51,6 @@ export function PrivateChatList({ onSelectConversation }: PrivateChatListProps) 
         </div>
       </div>
 
-
-      {/* Conversations list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="divide-y divide-border/30">
@@ -103,7 +95,6 @@ export function PrivateChatList({ onSelectConversation }: PrivateChatListProps) 
         )}
       </div>
 
-      {/* User search modal */}
       <UserSearchModal
         open={showUserSearch}
         onOpenChange={setShowUserSearch}
@@ -112,19 +103,21 @@ export function PrivateChatList({ onSelectConversation }: PrivateChatListProps) 
   );
 }
 
-function ConversationItem({ 
-  conversation, 
-  onClick 
-}: { 
-  conversation: PrivateConversation; 
+function ConversationItem({
+  conversation,
+  onClick,
+}: {
+  conversation: PrivateConversation;
   onClick: () => void;
 }) {
   const name = conversation.other_user?.display_name || 'Пользователь';
-  
-  const timeAgo = conversation.last_message 
-    ? formatDistanceToNow(new Date(conversation.last_message.created_at), { 
-        addSuffix: false, 
-        locale: ru 
+  const avatarUrl = conversation.other_user?.avatar_url || undefined;
+  const initial = name.charAt(0).toUpperCase();
+
+  const timeAgo = conversation.last_message
+    ? formatDistanceToNow(new Date(conversation.last_message.created_at), {
+        addSuffix: false,
+        locale: ru,
       })
     : '';
 
@@ -140,12 +133,10 @@ function ConversationItem({
       )}
     >
       <Avatar className="h-12 w-12">
-        <AvatarImage src={conversation.other_user?.avatar_url || ''} />
-        <AvatarFallback className="bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900 dark:to-blue-900 text-primary">
-          {name[0].toUpperCase()}
-        </AvatarFallback>
+        {avatarUrl && <AvatarImage src={avatarUrl} />}
+        <AvatarFallback className="text-primary">{initial}</AvatarFallback>
       </Avatar>
-      
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <p className={cn(
@@ -162,8 +153,8 @@ function ConversationItem({
         </div>
         <p className={cn(
           "text-sm truncate mt-0.5",
-          conversation.unread_count && conversation.unread_count > 0 
-            ? "text-foreground" 
+          conversation.unread_count && conversation.unread_count > 0
+            ? "text-foreground"
             : "text-muted-foreground"
         )}>
           {conversation.last_message?.content || 'Нет сообщений'}
@@ -171,8 +162,8 @@ function ConversationItem({
       </div>
 
       {conversation.unread_count && conversation.unread_count > 0 && (
-        <Badge 
-          variant="default" 
+        <Badge
+          variant="default"
           className="bg-primary/80 text-primary-foreground h-5 min-w-[20px] flex items-center justify-center rounded-full text-xs px-1.5"
         >
           {conversation.unread_count > 99 ? '99+' : conversation.unread_count}

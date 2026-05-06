@@ -53,9 +53,9 @@ export const PLANS: Record<PlanId, PlanConfig> = {
   free: {
     id: 'free',
     public: true,
-    name: 'Дыхание',
-    nameEn: 'BREATH',
-    tagline: 'Скорая помощь в моменте',
+    name: 'Free',
+    nameEn: 'Free',
+    tagline: 'Быстрая поддержка в моменте',
     features: {
       therapy: {
         weeklySessions: 1,
@@ -63,15 +63,18 @@ export const PLANS: Record<PlanId, PlanConfig> = {
         allowExtraSessionPurchase: true,
       },
       navigator: {
-        dailyMessages: 0, // No access after trial
+        dailyMessages: 7, // Jiva Fast — 7 сообщений в сутки (после исчерпания Deep-ресурса).
         modelTier: 'free',
       },
       artTherapy: {
-        dailyAnalyses: 0, // Only drawing, no analysis
+        dailyAnalyses: 0, // Только рисование, без анализа
       },
+      // Free получает FREE_DEEP_TOTAL_LIMIT (=15) сообщений на Deep-модели за всё время,
+      // потом автоматически переключается на Fast (10/сутки).
+      // Источник правды — edge-функция ai-chat (FREE_DEEP_TOTAL_LIMIT, FREE_FAST_DAILY_LIMIT).
       trial: {
-        durationHours: 24,
-        messages: 3,
+        durationHours: 0, // больше не используется — переход по счётчику сообщений, не по времени.
+        messages: 15,
         artAnalyses: 1,
       },
       memory: false,
@@ -82,9 +85,9 @@ export const PLANS: Record<PlanId, PlanConfig> = {
   premium: {
     id: 'premium',
     public: true,
-    name: 'Опора',
-    nameEn: 'ANCHOR',
-    tagline: 'Глубокая работа с состоянием',
+    name: 'Premium',
+    nameEn: 'Premium',
+    tagline: 'Jiva Deep — глубокая, помнит тебя',
     monthlyPriceRub: PRICES.PREMIUM_RUB,
     features: {
       therapy: {
@@ -93,15 +96,15 @@ export const PLANS: Record<PlanId, PlanConfig> = {
         allowExtraSessionPurchase: true,
       },
       navigator: {
-        dailyMessages: 10, // 10 messages per day
+        dailyMessages: 30, // 30 сообщений в день с Jiva Deep
         modelTier: 'premium',
       },
       emergencyBuffer: {
-        perDay: 5, // +5 messages when activated
-        usesPerMonth: 3, // Can use 3 times per month
+        perDay: 5,
+        usesPerMonth: 3,
       },
       artTherapy: {
-        dailyAnalyses: 3, // 3 analyses per day
+        dailyAnalyses: 3,
       },
       memory: true,
       prioritySupport: true,

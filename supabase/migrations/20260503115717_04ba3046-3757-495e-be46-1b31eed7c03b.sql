@@ -1,0 +1,17 @@
+BEGIN;
+DELETE FROM public.ai_messages;
+DELETE FROM public.ai_chats;
+DELETE FROM public.jiva_memory_chunks;
+DELETE FROM public.jiva_ingest_queue;
+DELETE FROM public.post_comments;
+DELETE FROM public.post_reactions;
+DELETE FROM public.pinned_moments;
+DELETE FROM public.posts;
+DELETE FROM public.pinned_community_messages;
+DELETE FROM public.message_reactions;
+DELETE FROM public.message_read_receipts;
+DELETE FROM public.community_messages;
+DELETE FROM public.story_comments;
+DELETE FROM public.story_reactions;
+DELETE FROM public.user_stories;
+COMMIT;

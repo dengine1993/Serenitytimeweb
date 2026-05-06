@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Lock, MessageCircle, Sparkles, ArrowRight, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '@/hooks/useI18n';
 import jivaLogo from '@/assets/jiva.png';
 
 interface JivaReplyUpsellModalProps {
@@ -13,6 +14,7 @@ interface JivaReplyUpsellModalProps {
 
 export function JivaReplyUpsellModal({ open, onOpenChange, context = 'default' }: JivaReplyUpsellModalProps) {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const handleUpgrade = () => {
     onOpenChange(false);
@@ -23,26 +25,26 @@ export function JivaReplyUpsellModal({ open, onOpenChange, context = 'default' }
     switch (context) {
       case 'trial_limit':
         return {
-          title: 'Диалог завершён',
-          subtitle: '3 сообщения — это было только начало',
-          description: 'Тебе понравилось? С Опорой Jiva сможет отвечать тебе под любым постом — до 3 ответов в день.',
-          buttonText: 'Продолжить с Jiva',
+          title: t('feed.upsell.trialLimitTitle'),
+          subtitle: t('feed.upsell.trialLimitSubtitle'),
+          description: t('feed.upsell.trialLimitDescription'),
+          buttonText: t('feed.upsell.trialLimitButton'),
           showTrialComplete: true,
         };
       case 'trial_used':
         return {
-          title: 'Jiva уже ждёт',
-          subtitle: 'Ты уже пробовал(а) диалог с ней',
-          description: 'Пробный диалог уже был. С Опорой Jiva отвечает под любым постом — до 3 ответов в день.',
-          buttonText: 'Открыть диалоги с Jiva',
+          title: t('feed.upsell.trialUsedTitle'),
+          subtitle: t('feed.upsell.trialUsedSubtitle'),
+          description: t('feed.upsell.trialUsedDescription'),
+          buttonText: t('feed.upsell.trialUsedButton'),
           showTrialComplete: false,
         };
       default:
         return {
-          title: 'Jiva готова продолжить',
-          subtitle: null,
-          description: 'Чтобы Jiva отвечала под постами в ленте, нужен тариф «Опора».',
-          buttonText: 'Обрести Опору',
+          title: t('feed.upsell.defaultTitle'),
+          subtitle: null as string | null,
+          description: t('feed.upsell.defaultDescription'),
+          buttonText: t('feed.upsell.defaultButton'),
           showTrialComplete: false,
         };
     }
@@ -60,7 +62,6 @@ export function JivaReplyUpsellModal({ open, onOpenChange, context = 'default' }
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
             className="mx-auto mb-4 relative"
           >
-            {/* Jiva avatar with violet glow */}
             <div className="relative h-20 w-20">
               <div className="absolute inset-0 rounded-full bg-violet-400/40 blur-xl" />
               <img
@@ -107,17 +108,17 @@ export function JivaReplyUpsellModal({ open, onOpenChange, context = 'default' }
           <div className="bg-violet-500/5 border border-violet-500/10 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-3 text-sm">
               <MessageCircle className="h-4 w-4 text-violet-500 flex-shrink-0" />
-              <span className="text-foreground/90">3 ответа Jiva в день под любым постом</span>
+              <span className="text-foreground/90">{t('feed.upsell.benefitReplies')}</span>
             </div>
             <div className="flex items-center gap-3 text-sm">
               <Sparkles className="h-4 w-4 text-violet-500 flex-shrink-0" />
-              <span className="text-foreground/90">Голосовые сессии с Jiva и память</span>
+              <span className="text-foreground/90">{t('feed.upsell.benefitMemory')}</span>
             </div>
           </div>
 
           {context === 'trial_limit' && (
             <p className="text-center text-xs text-muted-foreground/70">
-              Тебе понравилось? Это только начало 🚀
+              {t('feed.upsell.teaser')}
             </p>
           )}
         </div>
@@ -136,7 +137,7 @@ export function JivaReplyUpsellModal({ open, onOpenChange, context = 'default' }
             onClick={() => onOpenChange(false)}
             className="w-full text-muted-foreground hover:text-foreground"
           >
-            Позже
+            {t('feed.upsell.later')}
           </Button>
         </div>
       </DialogContent>

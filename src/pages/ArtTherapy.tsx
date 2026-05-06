@@ -1,24 +1,24 @@
 import { Helmet } from "react-helmet-async";
-import MoodCanvas from '@/features/art-therapy/MoodCanvas';
+import { Suspense, lazy } from "react";
 
-/**
- * Art Therapy Page
- * 
- * Now accessible to ALL users (free and premium).
- * - Free users: 3 AI analyses per month
- * - Premium users: Unlimited AI analyses
- * 
- * Drawing is always available, quota only affects AI analysis.
- */
+// Lazy: MoodCanvas тянет konva (~150KB). Грузим только при заходе на /art-therapy.
+const MoodCanvas = lazy(() => import('@/features/art-therapy/MoodCanvas'));
+
 export function ArtTherapyPage() {
   return (
     <>
       <Helmet>
-        <title>Mood Canvas — Арт-терапия</title>
-        <meta name="description" content="Выражай свои эмоции через рисование. Терапевтический инструмент для снижения тревоги." />
+        <title>Mood Canvas — Образ дня</title>
+        <meta name="description" content="Нарисуй свой шаг — Джива увидит и мягко отзовётся. Образ дня для пути к себе." />
       </Helmet>
-      
-      <MoodCanvas />
+
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+        </div>
+      }>
+        <MoodCanvas />
+      </Suspense>
     </>
   );
 }

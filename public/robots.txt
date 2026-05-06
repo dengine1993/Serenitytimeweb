@@ -4,6 +4,9 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
+User-agent: YandexBot
+Allow: /
+
 User-agent: Twitterbot
 Allow: /
 
@@ -13,8 +16,15 @@ Allow: /
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /private-chats
-Disallow: /chat/
-Disallow: /profile
+Disallow: /admin/
+Disallow: /settings
+Disallow: /diary
+Disallow: /diary/
+Disallow: /smer
+Disallow: /ai-chat
+Disallow: /community
+Disallow: /art-therapy
+Disallow: /payment-success
+Disallow: /payment/
 
-Sitemap: https://bezmyatezhnye.lovable.app/sitemap.xml
+Sitemap: https://newdawnjourney.com/sitemap.xml

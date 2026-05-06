@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { addMonths } from 'npm:date-fns@3';
 import { getSupabaseClient } from '../_shared/db.ts';
 import { getProductById, ProductDefinition } from '../_shared/products.ts';
+import { sendMail } from '../_shared/smtp.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,6 +109,7 @@ export async function grantPremiumSubscription(
   supabase: ReturnType<typeof getSupabaseClient>,
   userId: string,
   intervalMonths: number,
+  paymentMethodId?: string | null,
 ) {
   const billingInterval = intervalMonths >= 12 ? 'year' : 'month';
   const autoRenew = billingInterval === 'month';
@@ -124,15 +126,21 @@ export async function grantPremiumSubscription(
     : new Date();
   const newPeriodEnd = addMonths(baseDate, intervalMonths);
 
+  const updateFields: Record<string, unknown> = {
+    status: 'active',
+    current_period_end: newPeriodEnd.toISOString(),
+    billing_interval: billingInterval,
+    auto_renew: autoRenew,
+    failed_charge_count: 0,
+  };
+  if (paymentMethodId) {
+    updateFields.yookassa_payment_method_id = paymentMethodId;
+  }
+
   if (existingSub) {
     await supabase
       .from('subscriptions')
-      .update({
-        status: 'active',
-        current_period_end: newPeriodEnd.toISOString(),
-        billing_interval: billingInterval,
-        auto_renew: autoRenew,
-      })
+      .update(updateFields)
       .eq('id', existingSub.id);
   } else {
     await supabase
@@ -140,10 +148,7 @@ export async function grantPremiumSubscription(
       .insert({
         user_id: userId,
         plan: 'premium',
-        status: 'active',
-        current_period_end: newPeriodEnd.toISOString(),
-        billing_interval: billingInterval,
-        auto_renew: autoRenew,
+        ...updateFields,
       });
   }
 
@@ -196,12 +201,6 @@ async function sendPaymentConfirmationEmail(
   productName: string,
   amount: string,
 ) {
-  const UNISENDER_API_KEY = Deno.env.get('UNISENDER_GO_API_KEY');
-  if (!UNISENDER_API_KEY) {
-    console.log('UNISENDER_GO_API_KEY not set, skipping email');
-    return;
-  }
-
   const { data: authUser } = await supabase.auth.admin.getUserById(userId);
   const email = authUser?.user?.email;
   if (!email) {
@@ -236,7 +235,7 @@ async function sendPaymentConfirmationEmail(
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">🌿 Безмятежные</div>
+      <div class="logo">🌿 Восход</div>
     </div>
     <div class="content">
       <div class="success">✓</div>
@@ -247,31 +246,20 @@ async function sendPaymentConfirmationEmail(
       <p>Ваша подписка уже активирована — можете пользоваться всеми возможностями прямо сейчас.</p>
     </div>
     <div class="footer">
-      <p>С заботой, команда Безмятежных 💚</p>
+      <p>С заботой, команда Восхода 💚</p>
     </div>
   </div>
 </body>
 </html>`;
 
-  const response = await fetch('https://go2.unisender.ru/ru/transactional/api/v1/email/send.json', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-KEY': UNISENDER_API_KEY,
-    },
-    body: JSON.stringify({
-      message: {
-        recipients: [{ email }],
-        body: { html: emailHtml },
-        subject: 'Оплата прошла успешно — Безмятежные',
-        from_email: 'noreply@serenitypeople.ru',
-        from_name: 'Безмятежные',
-      },
-    }),
+  const result = await sendMail({
+    to: email,
+    subject: 'Оплата прошла успешно — Восход',
+    html: emailHtml,
   });
 
-  if (!response.ok) {
-    console.error('Email send failed:', await response.text());
+  if (!result.ok) {
+    console.error('Email send failed:', result.error);
   } else {
     console.log('Confirmation email sent to:', email);
   }
@@ -281,10 +269,11 @@ async function grantEntitlement(
   supabase: ReturnType<typeof getSupabaseClient>,
   product: ProductDefinition,
   userId: string,
+  paymentMethodId?: string | null,
 ) {
   switch (product.entitlement.kind) {
     case 'subscription':
-      await grantPremiumSubscription(supabase, userId, product.entitlement.intervalMonths);
+      await grantPremiumSubscription(supabase, userId, product.entitlement.intervalMonths, paymentMethodId);
       return;
     case 'jiva_extra':
       await grantJivaExtraSession(supabase, userId, product.entitlement.quantity);
@@ -314,6 +303,12 @@ async function handlePaymentSucceeded(
     throw new Error('Payment not found');
   }
 
+  // M5: Idempotency — don't re-grant entitlement on webhook retry
+  if (payment.status === 'succeeded') {
+    console.log('Payment already processed, skipping:', payment.id);
+    return jsonResponse({ ok: true, alreadyProcessed: true });
+  }
+
   const metadata = (paymentObject.metadata || {}) as Record<string, string>;
   const productId = metadata.product || payment.product_type;
   if (!productId) {
@@ -338,15 +333,29 @@ async function handlePaymentSucceeded(
     return jsonResponse({ error: 'Unknown product' }, 400);
   }
 
-  // Soft check for amount - log warning but continue (may be referral discount)
+  // C4: Strict amount validation. We trust `payments.amount` (set server-side
+  // in create-checkout / upgrade-subscription with applied discounts) over the
+  // catalog price, because of legitimate discounts.
   const paymentAmount = paymentObject.amount as { value?: string; currency?: string } | undefined;
-  if (!amountsMatch(product, paymentAmount)) {
-    console.warn('Amount mismatch for payment (may be referral discount)', {
+  const expectedAmount = Number(payment.amount).toFixed(2);
+  const actualAmount = paymentAmount?.value ? Number(paymentAmount.value).toFixed(2) : null;
+  const expectedCurrency = (payment.currency || 'RUB').toUpperCase();
+  const actualCurrency = (paymentAmount?.currency || '').toUpperCase();
+
+  if (!actualAmount || expectedAmount !== actualAmount || expectedCurrency !== actualCurrency) {
+    console.error('Amount mismatch — refusing to grant entitlement', {
       paymentId: payment.id,
-      expected: product.amount,
-      actual: paymentAmount,
+      expected: { amount: expectedAmount, currency: expectedCurrency },
+      actual: { amount: actualAmount, currency: actualCurrency },
     });
-    // Continue processing - don't fail on amount mismatch due to discounts
+    await markPaymentStatus(supabase, payment.id, 'failed', {
+      ...payment.meta,
+      reason: 'amount_mismatch',
+      expected: { amount: expectedAmount, currency: expectedCurrency },
+      actual: { amount: actualAmount, currency: actualCurrency },
+      yookassa_event: payload,
+    });
+    return jsonResponse({ error: 'Amount mismatch' }, 400);
   }
 
   await markPaymentStatus(supabase, payment.id, 'succeeded', {
@@ -356,7 +365,28 @@ async function handlePaymentSucceeded(
     yookassa_event: payload,
   });
 
-  await grantEntitlement(supabase, product, payment.user_id);
+  // Capture payment_method.id for future recurring charges (subscription products).
+  // YooKassa возвращает payment_method.saved=true только для платежа, который сам
+  // создал «сохранённый» способ оплаты (первая транзакция с save_payment_method:true).
+  // На последующих рекуррентных списаниях saved=false, но id остаётся валидным.
+  // Поэтому для подписок мы доверяем самому наличию payment_method.id и сохраняем его —
+  // это нужно, чтобы subscription-charge-recurrent смог продлить подписку через год/месяц.
+  const paymentMethod = paymentObject.payment_method as { id?: string; saved?: boolean; type?: string } | undefined;
+  const paymentMethodId =
+    product.entitlement.kind === 'subscription' && paymentMethod?.id
+      ? paymentMethod.id
+      : null;
+
+  if (product.entitlement.kind === 'subscription') {
+    console.log('[webhook] subscription payment_method:', {
+      hasId: !!paymentMethod?.id,
+      saved: paymentMethod?.saved,
+      type: paymentMethod?.type,
+      willStore: !!paymentMethodId,
+    });
+  }
+
+  await grantEntitlement(supabase, product, payment.user_id, paymentMethodId);
 
 
   // Send confirmation email
@@ -452,22 +482,59 @@ async function handleRefundSucceeded(
   return jsonResponse({ ok: true });
 }
 
+async function verifyHmac(rawBody: string, headerSig: string | null, secret: string): Promise<boolean> {
+  if (!headerSig) return false;
+  // YooKassa формат: "sha256=<hex>"
+  const expectedHex = headerSig.startsWith('sha256=') ? headerSig.slice(7) : headerSig;
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+  const computedHex = Array.from(new Uint8Array(sigBuf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  // Constant-time comparison
+  if (computedHex.length !== expectedHex.length) return false;
+  let diff = 0;
+  for (let i = 0; i < computedHex.length; i++) {
+    diff |= computedHex.charCodeAt(i) ^ expectedHex.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Validate request is from YooKassa
-    const clientIp = getClientIp(req);
-    if (!isYooKassaIp(clientIp)) {
-      console.error('Unauthorized IP address:', clientIp);
-      return jsonResponse({ error: 'Unauthorized' }, 403);
+    const rawBody = await req.text();
+
+    // M4: HMAC signature check (preferred) — falls back to IP whitelist if secret not configured
+    const webhookSecret = Deno.env.get('YOOKASSA_WEBHOOK_SECRET');
+    if (webhookSecret) {
+      const sig = req.headers.get('content-hmac') || req.headers.get('x-content-hmac');
+      const valid = await verifyHmac(rawBody, sig, webhookSecret);
+      if (!valid) {
+        console.error('HMAC signature mismatch');
+        return jsonResponse({ error: 'Invalid signature' }, 403);
+      }
+    } else {
+      const clientIp = getClientIp(req);
+      if (!isYooKassaIp(clientIp)) {
+        console.error('Unauthorized IP address:', clientIp);
+        return jsonResponse({ error: 'Unauthorized' }, 403);
+      }
     }
 
     const supabase = getSupabaseClient();
-    const payload = await req.json();
-    console.log('YooKassa webhook received from IP', clientIp, ':', JSON.stringify(payload));
+    const payload = JSON.parse(rawBody);
+    console.log('YooKassa webhook received:', JSON.stringify(payload));
 
     const { event, object: eventObject } = payload;
 

@@ -15,6 +15,7 @@ import { MentionSuggestions } from './MentionSuggestions';
 import { useS3Upload } from '@/hooks/useS3Upload';
 import { compressImage, isAllowedInCommunity } from '@/lib/imageCompression';
 import { Progress } from '@/components/ui/progress';
+import { useI18n } from '@/hooks/useI18n';
 
 // Flying message bubble component
 const FlyingBubble = memo(({ content, onComplete }: { content: string; onComplete: () => void }) => (
@@ -175,6 +176,7 @@ function EmojiPickerPopover({ onEmojiSelect }: { onEmojiSelect: (emoji: string) 
 }
 
 export function CommunityInput({ onSend, replyTo, onCancelReply, onTyping, disabled }: CommunityInputProps) {
+  const { t } = useI18n();
   const [content, setContent] = useState('');
   const [cursorPosition, setCursorPosition] = useState(0);
   const [isSending, setIsSending] = useState(false);
@@ -335,7 +337,7 @@ export function CommunityInput({ onSend, replyTo, onCancelReply, onTyping, disab
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1 text-xs text-primary font-medium">
                   <Reply className="h-3 w-3" />
-                  {replyTo.author?.display_name || 'Аноним'}
+                  {replyTo.author?.display_name || t('community.message.anonymous')}
                 </div>
                 <p className="text-sm text-muted-foreground truncate">
                   {replyTo.content}
@@ -370,7 +372,7 @@ export function CommunityInput({ onSend, replyTo, onCancelReply, onTyping, disab
                 <div className="w-3/4">
                   <Progress value={uploadProgress} className="h-2" />
                 </div>
-                <p className="text-xs text-muted-foreground">Загрузка... {uploadProgress}%</p>
+                <p className="text-xs text-muted-foreground">{t('community.input.uploading', { progress: uploadProgress })}</p>
               </motion.div>
             )}
             
@@ -389,7 +391,7 @@ export function CommunityInput({ onSend, replyTo, onCancelReply, onTyping, disab
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} МБ
+                  {t('community.input.sizeMb', { size: (selectedFile.size / 1024 / 1024).toFixed(2) })}
                 </p>
               </div>
               <Button
@@ -419,7 +421,7 @@ export function CommunityInput({ onSend, replyTo, onCancelReply, onTyping, disab
             size="icon"
             onClick={() => fileInputRef.current?.click()}
             className="shrink-0 rounded-full h-9 w-9 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
-            aria-label="Прикрепить фото или PDF"
+            aria-label={t('community.input.attachAria')}
           >
             <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
@@ -434,7 +436,7 @@ export function CommunityInput({ onSend, replyTo, onCancelReply, onTyping, disab
             onChange={handleChange}
             onSelect={handleSelect}
             onKeyDown={handleKeyDown}
-            placeholder="Сообщение..."
+            placeholder={t('community.input.placeholder')}
             className="flex-1 min-h-[36px] sm:min-h-[40px] max-h-[100px] sm:max-h-[120px] py-2 sm:py-2.5 px-2 sm:px-4 border-0 bg-transparent resize-none text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0"
             rows={1}
           />
@@ -445,7 +447,7 @@ export function CommunityInput({ onSend, replyTo, onCancelReply, onTyping, disab
               onClick={handleSend}
               disabled={(!content.trim() && !selectedFile) || isSending || disabled}
               size="icon"
-              aria-label="Отправить сообщение"
+              aria-label={t('community.input.sendAria')}
               className={cn(
                 "shrink-0 rounded-full h-9 w-9 sm:h-10 sm:w-10 transition-all",
                 (content.trim() || selectedFile)

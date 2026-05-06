@@ -103,8 +103,8 @@ export function ArtGalleryTab() {
         </h3>
         <p className="text-sm text-muted-foreground max-w-xs mx-auto">
           {language === 'ru' 
-            ? 'Создай свой первый рисунок в разделе Арт-терапия' 
-            : 'Create your first drawing in Art Therapy'}
+            ? 'Создай свой первый рисунок в разделе «Образ дня»' 
+            : 'Create your first drawing in Mood Sketch'}
         </p>
       </motion.div>
     );
@@ -125,7 +125,7 @@ export function ArtGalleryTab() {
             <div className="aspect-square rounded-2xl overflow-hidden bg-muted/20 border border-border/30 shadow-lg">
               <img
                 src={entry.image_base64}
-                alt="Art therapy drawing"
+                alt="Mood Sketch drawing"
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
             </div>
@@ -167,7 +167,7 @@ export function ArtGalleryTab() {
               <div className="aspect-square w-full">
                 <img
                   src={selectedEntry.image_base64}
-                  alt="Art therapy drawing"
+                  alt="Mood Sketch drawing"
                   className="w-full h-full object-cover rounded-t-3xl"
                 />
               </div>

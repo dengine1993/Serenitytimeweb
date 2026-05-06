@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { useMoodEntries } from '@/hooks/useMoodEntries';
 
 const encouragements = [
-  "Горжусь тобой! Продолжай в том же духе 💙",
-  "Ты на правильном пути. Каждый день важен 🌟",
-  "Твоя последовательность вдохновляет! ✨",
-  "Смотри, как далеко ты зашёл! 🔥",
+  "Горжусь тобой! Ты рядом с собой 💙",
+  "Каждый день — маленький восход 🌅",
+  "Ты возвращаешься — это уже много 🌟",
+  "Смотри, как далеко ты зашёл 🔥",
   "Ты сильнее, чем думаешь 💪",
 ];
 
@@ -20,8 +20,9 @@ export function EnhancedStreakWidget() {
   const { user } = useAuth();
   const { theme } = useHomeTheme();
   const navigate = useNavigate();
-  const { stats, loading } = useMoodEntries();
+  const { stats, loading: moodLoading } = useMoodEntries();
   const streak = stats.streak;
+  const loading = moodLoading;
 
   const streakMessage = useMemo(() => {
     if (streak > 0) {
@@ -29,6 +30,7 @@ export function EnhancedStreakWidget() {
     }
     return '';
   }, [streak]);
+
 
   // Calculate progress for circle (max 30 days for full circle)
   const maxDays = 30;
@@ -109,17 +111,12 @@ export function EnhancedStreakWidget() {
             </defs>
           </svg>
           
-          {/* Center content */}
+          {/* Center content — без пульсации/радиального свечения (визуальный шум) */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <motion.div
-              animate={streak > 0 ? { scale: [1, 1.1, 1] } : {}}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <FireIcon className={cn(
-                "h-6 w-6 sm:h-7 sm:w-7 mb-0.5",
-                streak > 0 ? "text-emerald-500" : theme === 'light' ? "text-emerald-300" : "text-emerald-700"
-              )} />
-            </motion.div>
+            <FireIcon className={cn(
+              "h-6 w-6 sm:h-7 sm:w-7 mb-0.5",
+              streak > 0 ? "text-emerald-500" : theme === 'light' ? "text-emerald-300" : "text-emerald-700"
+            )} />
             <span className={cn(
               "text-xl sm:text-2xl font-bold",
               theme === 'light' ? "text-slate-800" : "text-slate-200"
@@ -127,18 +124,6 @@ export function EnhancedStreakWidget() {
               {streak}
             </span>
           </div>
-          
-          {/* Soft glow effect when streak is active */}
-          {streak > 0 && (
-            <motion.div
-              className="absolute inset-0 rounded-full pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle, hsl(158 55% 45% / 0.2) 0%, transparent 70%)',
-              }}
-              animate={{ opacity: [0.4, 0.7, 0.4] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            />
-          )}
         </div>
 
         {/* Text content */}
@@ -148,7 +133,7 @@ export function EnhancedStreakWidget() {
               "text-base sm:text-lg font-bold",
               theme === 'light' ? "text-slate-800" : "text-slate-200"
             )}>
-              {streak === 0 ? 'Начни серию' : `${streak} ${streak === 1 ? 'день' : streak < 5 ? 'дня' : 'дней'}`}
+              {streak === 0 ? 'Начни вести дневник' : `${streak} ${streak === 1 ? 'день' : streak < 5 ? 'дня' : 'дней'}`}
             </h4>
             {streak >= 7 && (
               <SparklesIcon className="h-4 w-4 text-emerald-500" />
@@ -168,19 +153,19 @@ export function EnhancedStreakWidget() {
                 "text-sm leading-relaxed",
                 theme === 'light' ? "text-slate-500" : "text-slate-400"
               )}>
-                Записывай моменты каждый день
+                Каждая запись в дневнике = +1 день рядом с собой
               </p>
               <Button
                 size="default"
                 onClick={() => navigate('/diary')}
                 className={cn(
                   "font-semibold px-5 py-2.5",
-                  "bg-gradient-to-r from-amber-700/80 to-yellow-700/70 hover:from-amber-600/80 hover:to-yellow-600/70",
-                  "text-amber-50 shadow-md shadow-amber-900/20",
+                  "bg-gradient-to-r from-emerald-700/80 to-teal-700/70 hover:from-emerald-600/80 hover:to-teal-600/70",
+                  "text-emerald-50 shadow-md shadow-emerald-900/20",
                   "transition-all duration-300"
                 )}
               >
-                Начать дневник
+                Открыть дневник
               </Button>
             </div>
           )}

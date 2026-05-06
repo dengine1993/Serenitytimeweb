@@ -3,12 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface ProductPrices {
   premiumMonthly: number;
-  premiumYearly: number;
 }
 
 const DEFAULT_PRICES: ProductPrices = {
   premiumMonthly: 690,
-  premiumYearly: 6990,
 };
 
 function parseProducts(value: unknown): ProductPrices | null {
@@ -18,7 +16,6 @@ function parseProducts(value: unknown): ProductPrices | null {
     if (!products) return null;
     return {
       premiumMonthly: products.premium_subscription_monthly?.amount?.value ?? DEFAULT_PRICES.premiumMonthly,
-      premiumYearly: products.premium_subscription_yearly?.amount?.value ?? DEFAULT_PRICES.premiumYearly,
     };
   } catch {
     return null;
@@ -54,7 +51,6 @@ export function usePricing() {
 
     fetchPrices();
 
-    // Realtime: react to admin price updates without refresh
     const channel = supabase
       .channel('app_config:product_catalog')
       .on(
@@ -73,25 +69,8 @@ export function usePricing() {
     };
   }, []);
 
-  const fullYearlyPrice = prices.premiumMonthly * 12;
-  const yearlySavings = fullYearlyPrice - prices.premiumYearly;
-  const yearlyDiscountPercent = fullYearlyPrice > 0
-    ? Math.round((yearlySavings / fullYearlyPrice) * 100)
-    : 0;
-  const monthlyEquivalent = Math.round(prices.premiumYearly / 12);
-  const savingsPerMonth = prices.premiumMonthly - monthlyEquivalent;
-  const freeMonths = prices.premiumMonthly > 0
-    ? Math.round(yearlySavings / prices.premiumMonthly)
-    : 0;
-
   return {
     ...prices,
-    fullYearlyPrice,
-    yearlySavings,
-    yearlyDiscountPercent,
-    monthlyEquivalent,
-    savingsPerMonth,
-    freeMonths,
     loading,
   };
 }

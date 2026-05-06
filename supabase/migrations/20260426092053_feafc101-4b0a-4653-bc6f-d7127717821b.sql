@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_crisis_sessions_user_date ON public.crisis_sessions(user_id, created_at DESC);

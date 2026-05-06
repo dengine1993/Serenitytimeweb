@@ -21,6 +21,7 @@ const NotificationsSettings = lazy(() => import("@/components/profile/Notificati
 const PrivacySettings = lazy(() => import("@/components/profile/PrivacySettings").then(m => ({ default: m.PrivacySettings })));
 const ArtGalleryTab = lazy(() => import("@/components/profile/ArtGalleryTab").then(m => ({ default: m.ArtGalleryTab })));
 const FriendsList = lazy(() => import("@/components/friends/FriendsList").then(m => ({ default: m.FriendsList })));
+const SubscriptionManager = lazy(() => import("@/components/billing/SubscriptionManager").then(m => ({ default: m.SubscriptionManager })));
 
 type SettingsTab = "profile" | "subscription" | "notifications" | "privacy" | "friends" | "gallery";
 
@@ -118,7 +119,7 @@ export default function Settings() {
 
             {/* Subscription Tab */}
             <TabsContent value="subscription" className="space-y-4">
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                 <Card className="glass-card p-6 border-primary/30">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
@@ -139,6 +140,12 @@ export default function Settings() {
                     </div>
                   </div>
                 </Card>
+
+                {isPremium && (
+                  <Suspense fallback={<TabContentSkeleton variant="simple" />}>
+                    <SubscriptionManager />
+                  </Suspense>
+                )}
               </motion.div>
             </TabsContent>
 

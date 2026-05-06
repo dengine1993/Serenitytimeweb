@@ -18,7 +18,7 @@ export const ValueFirstOnboarding = () => {
     setIsVisible(false);
 
     if (mood === 'anxious') {
-      navigate('/crisis');
+      navigate('/ai-chat');
     } else if (mood === 'sad') {
       navigate('/diary');
     } else {

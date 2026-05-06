@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { redactPII } from "../_shared/anonymize.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,8 +40,9 @@ serve(async (req) => {
     }
 
     // Prepare mood data for analysis
-    const moodSummary = entries.map(e => 
-      `${e.date}: ${e.mood}${e.note ? ` - "${e.note}"` : ''}`
+    // Заметки пользователя — свободный текст, обезличиваем перед зарубежным LLM.
+    const moodSummary = entries.map(e =>
+      `${e.date}: ${e.mood}${e.note ? ` - "${redactPII(e.note)}"` : ''}`
     ).join('\n');
 
     // Count mood frequencies

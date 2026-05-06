@@ -4,6 +4,7 @@ import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWebPush } from "@/hooks/useWebPush";
 import { useAuth } from "@/hooks/useAuth";
+import { isNativePlatform } from "@/lib/platform";
 
 export function WebPushPrompt() {
   const { user } = useAuth();
@@ -12,6 +13,8 @@ export function WebPushPrompt() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    // Не показываем prompt в Capacitor: Web Push не поддерживается в WebView.
+    if (isNativePlatform()) return;
     if (!user || !isSupported || isSubscribed || dismissed) {
       return;
     }

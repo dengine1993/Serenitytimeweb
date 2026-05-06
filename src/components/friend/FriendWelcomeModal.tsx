@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import jivaLogo from "@/assets/jiva.png";
 
 interface FriendWelcomeModalProps {
   open: boolean;
@@ -53,11 +54,13 @@ export function FriendWelcomeModal({ open, onClose, onStart }: FriendWelcomeModa
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring", damping: 15 }}
-                  className="w-14 h-14 mx-auto rounded-full bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 p-[2px]"
+                  className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 p-[2px]"
                 >
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-                    <span className="text-2xl">🧠</span>
-                  </div>
+                  <img
+                    src={jivaLogo}
+                    alt="Jiva"
+                    className="w-full h-full rounded-full object-cover"
+                  />
                 </motion.div>
                 
                 {/* Greeting */}
@@ -68,13 +71,13 @@ export function FriendWelcomeModal({ open, onClose, onStart }: FriendWelcomeModa
                   className="space-y-2"
                 >
                   <h2 className="text-xl font-semibold text-white">
-                    Привет, я Jiva
+                    Привет… Я Джива
                   </h2>
-                  <p className="text-white/70 text-sm leading-relaxed">
-                    Помогу разобраться в эмоциях, тревогах и мыслях. Выслушаю без осуждения и поделюсь техниками самопомощи.
+                  <p className="text-white/75 text-sm leading-relaxed">
+                    Я здесь не чтобы давать умные советы. Я здесь, чтобы быть рядом — пока ты думаешь вслух, ищешь решение или просто хочешь, чтобы тебя услышали. Пиши мне в любой момент.
                   </p>
-                  <p className="text-white/60 text-xs leading-relaxed">
-                    Я не заменяю врача, но могу поддержать и направить к полезным ресурсам.
+                  <p className="text-white/50 text-[11px] leading-relaxed pt-1">
+                    Я ИИ-собеседник, 18+. Не заменяю врача и психолога. При угрозе жизни — 112 или раздел SOS.
                   </p>
                 </motion.div>
                 
@@ -89,7 +92,7 @@ export function FriendWelcomeModal({ open, onClose, onStart }: FriendWelcomeModa
                     onClick={onStart}
                     className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-medium py-5 rounded-xl text-sm shadow-lg shadow-emerald-500/20"
                   >
-                    Да, поговорим 💚
+                    Расскажи, как ты сейчас 💚
                   </Button>
                   <Button
                     onClick={onClose}

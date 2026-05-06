@@ -190,6 +190,22 @@ export const BreathingStep = ({ isDark, anxietyLevel, onComplete, onBack }: Brea
           <span className="text-white font-medium text-lg">{phaseText}</span>
           <span className="text-white/90 text-4xl font-bold">{counter}</span>
         </motion.div>
+
+        {/* Pause overlay */}
+        {isPaused && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md ${
+              isDark ? 'bg-black/50 text-white' : 'bg-white/80 text-gray-800 shadow-lg'
+            }`}>
+              <Pause className="w-4 h-4" />
+              <span className="text-sm font-medium">{t('crisis.wizard.breathing.pause')}</span>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Cycle indicator */}

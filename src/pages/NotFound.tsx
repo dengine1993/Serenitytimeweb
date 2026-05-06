@@ -1,7 +1,9 @@
-import AnimatedShaderBackground from "@/components/ui/animated-shader-background";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
+
+// Lazy: three.js (~600KB) грузим только когда юзер реально попал на 404.
+const AnimatedShaderBackground = lazy(() => import("@/components/ui/animated-shader-background"));
 import { Home } from "lucide-react";
 import { useI18n } from "@/hooks/useI18n";
 
@@ -16,7 +18,9 @@ const NotFound = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <AnimatedShaderBackground />
+      <Suspense fallback={<div className="absolute inset-0 bg-background" />}>
+        <AnimatedShaderBackground />
+      </Suspense>
       
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
         <div className="text-center">

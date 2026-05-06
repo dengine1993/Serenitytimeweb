@@ -14,8 +14,8 @@ export const ScrollProgress = () => {
       className="fixed top-0 left-0 right-0 h-1 z-50 origin-left"
       style={{
         scaleX,
-        background: 'linear-gradient(90deg, hsl(211, 100%, 55%), hsl(280, 90%, 60%), hsl(190, 100%, 50%))',
-        boxShadow: '0 0 20px hsl(211, 100%, 55%, 0.5)',
+        background: 'linear-gradient(90deg, hsl(28, 96%, 60%), hsl(35, 92%, 58%), hsl(350, 89%, 65%))',
+        boxShadow: '0 0 20px hsl(28, 96%, 55%, 0.55)',
       }}
     />
   );

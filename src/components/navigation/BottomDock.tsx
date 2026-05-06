@@ -18,8 +18,7 @@ type TabItem = {
 
 const tabs: TabItem[] = [
   { title: "Главная", href: "/app", icon: Home, ariaLabel: "Главная страница" },
-  { title: "Jiva", href: "/ai-chat", image: jivaLogo, ariaLabel: "Jiva — AI-психолог", glow: "rgba(168, 85, 247, 0.5)" },
-  { title: "SOS", href: "/crisis", ariaLabel: "Кризисная поддержка", glow: "rgba(239, 68, 68, 0.5)", urgent: true },
+  { title: "Jiva", href: "/ai-chat", image: jivaLogo, ariaLabel: "Jiva — AI-друг", glow: "rgba(251, 113, 133, 0.55)" },
   { title: "Чат", href: "/community", icon: Users, ariaLabel: "Чат" },
   { title: "Ещё", href: "#more", icon: Menu, ariaLabel: "Больше разделов" },
 ];

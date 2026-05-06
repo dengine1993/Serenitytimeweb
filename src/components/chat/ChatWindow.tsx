@@ -12,7 +12,6 @@ interface Message {
   content: string;
   created_at: string;
   user_id: string;
-  is_anonymous?: boolean;
   media_urls?: string[];
   media_type?: string;
   profiles?: {
@@ -132,9 +131,7 @@ export const ChatWindow = ({
           <div className="space-y-4">
             {messages.map((msg) => {
               const isOwn = msg.user_id === currentUserId;
-              const displayName = msg.is_anonymous
-                ? "Аноним"
-                : msg.profiles?.display_name || msg.profiles?.username || "Пользователь";
+              const displayName = msg.profiles?.display_name || msg.profiles?.username || "Пользователь";
 
               return (
                 <div

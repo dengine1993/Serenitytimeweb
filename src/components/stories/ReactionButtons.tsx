@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ReactionType, REACTION_EMOJIS } from '@/hooks/useStoryReactions';
+import { useI18n } from '@/hooks/useI18n';
 
 interface ReactionButtonsProps {
   counts: Record<ReactionType, number>;
@@ -8,6 +9,7 @@ interface ReactionButtonsProps {
   onToggle: (type: ReactionType) => void;
   size?: 'sm' | 'md';
   disabled?: boolean;
+  hideEmptyHint?: boolean;
 }
 
 const REACTION_TYPES: ReactionType[] = ['heart', 'hug', 'strength'];
@@ -17,9 +19,16 @@ export function ReactionButtons({
   userReactions, 
   onToggle, 
   size = 'md',
-  disabled = false 
+  disabled = false,
+  hideEmptyHint = false,
 }: ReactionButtonsProps) {
+  const { t } = useI18n();
   const totalCount = counts.heart + counts.hug + counts.strength;
+  const titles: Record<ReactionType, string> = {
+    heart: t('stories.reactions.heart'),
+    hug: t('stories.reactions.hug'),
+    strength: t('stories.reactions.strength'),
+  };
 
   return (
     <div className="flex items-center gap-1">
@@ -44,14 +53,9 @@ export function ReactionButtons({
                 : 'hover:bg-muted',
               disabled && 'opacity-50 cursor-not-allowed hover:scale-100'
             )}
-            title={type === 'heart' ? 'Сердечко' : type === 'hug' ? 'Обнимашки' : 'Сила'}
+            title={titles[type]}
           >
-            <span className={cn(
-              "transition-transform",
-              isActive && "animate-pulse"
-            )}>
-              {REACTION_EMOJIS[type]}
-            </span>
+            <span>{REACTION_EMOJIS[type]}</span>
             {count > 0 && (
               <span className={cn(
                 "font-medium",
@@ -65,9 +69,9 @@ export function ReactionButtons({
       })}
       
       {/* Show total if no reactions */}
-      {totalCount === 0 && (
+      {totalCount === 0 && !hideEmptyHint && (
         <span className="text-xs text-muted-foreground ml-1">
-          Поддержать
+          {t('stories.reactions.support')}
         </span>
       )}
     </div>

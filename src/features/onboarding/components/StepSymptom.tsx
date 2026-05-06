@@ -8,7 +8,7 @@ interface StepSymptomProps {
 
 const SYMPTOMS = [
     { id: "sleep", label: "Не могу уснуть", icon: Moon, color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-200" },
-    { id: "breath", label: "Трудно дышать", icon: Brain, color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-200" },
+    { id: "breath", label: "Тяжело в груди", icon: Brain, color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-200" },
     { id: "tears", label: "Хочется плакать", icon: HeartCrack, color: "bg-rose-500/10 border-rose-500/20 text-rose-200" },
     { id: "thoughts", label: "Мысли бегут по кругу", icon: Flame, color: "bg-orange-500/10 border-orange-500/20 text-orange-200" },
 ];
@@ -23,10 +23,10 @@ export const StepSymptom = ({ onNext }: StepSymptomProps) => {
         >
             <div className="space-y-2">
                 <h2 className="text-3xl font-bold text-white">
-                    Как это мешает жить?
+                    Что сейчас держит на месте?
                 </h2>
                 <p className="text-white/60">
-                    Выбери то, что беспокоит сильнее всего
+                    Выбери, что мешает сильнее всего
                 </p>
             </div>
 

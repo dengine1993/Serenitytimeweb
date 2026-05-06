@@ -43,8 +43,8 @@ async function getProviderSettings(): Promise<{ provider: 'polza' | 'lovable'; m
 
     cachedProvider = (providerData?.value as any)?.value || 'polza';
     cachedModels = (modelsData?.value as any) || {
-      jiva_primary: 'anthropic/claude-3-7-sonnet',
-      jiva_fallback: 'openai/gpt-4o-mini',
+      jiva_primary: 'anthropic/claude-sonnet-4.6',
+      jiva_fallback: 'anthropic/claude-sonnet-4.6',
       embedding: 'openai/text-embedding-3-large',
     };
 
@@ -54,8 +54,8 @@ async function getProviderSettings(): Promise<{ provider: 'polza' | 'lovable'; m
     return {
       provider: 'polza',
       models: cachedModels || {
-        jiva_primary: 'anthropic/claude-3-7-sonnet',
-        jiva_fallback: 'openai/gpt-4o-mini',
+        jiva_primary: 'anthropic/claude-sonnet-4.6',
+        jiva_fallback: 'anthropic/claude-sonnet-4.6',
         embedding: 'openai/text-embedding-3-large',
       },
     };

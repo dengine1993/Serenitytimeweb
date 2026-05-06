@@ -45,7 +45,12 @@ serve(async (req) => {
     const url = new URL(req.url);
     const type = (body.type || url.searchParams.get("type") || "admin") as
       | "admin" | "moderation" | "llm" | "consent";
-    const limit = Math.min(Number(body.limit || url.searchParams.get("limit") || 200), 500);
+    const limit = Math.min(Number(body.limit || url.searchParams.get("limit") || 50), 200);
+    const beforeCreatedAt = body.before_created_at as string | undefined;
+    const fromDate = body.from as string | undefined;
+    const toDate = body.to as string | undefined;
+    const adminFilter = body.admin_id as string | undefined;
+    const actionFilter = body.action_filter as string | undefined;
 
     const enrichWithProfiles = async (rows: any[], idFields: string[]) => {
       const ids = new Set<string>();
@@ -62,57 +67,53 @@ serve(async (req) => {
       return map;
     };
 
-    if (type === "admin") {
-      const { data, error } = await supabase
-        .from("admin_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      const map = await enrichWithProfiles(data || [], ["admin_id"]);
-      const enriched = (data || []).map((r) => ({ ...r, admin_name: map[r.admin_id] || "Unknown" }));
-      return jsonResp({ logs: enriched });
-    }
+    const tableMap = {
+      admin: "admin_logs",
+      moderation: "moderation_history",
+      llm: "llm_usage",
+      consent: "consent_log",
+    } as const;
 
+    const table = tableMap[type];
+    if (!table) throw new Error("Invalid type");
+
+    let q = supabase.from(table).select("*").order("created_at", { ascending: false }).limit(limit);
+    if (beforeCreatedAt) q = q.lt("created_at", beforeCreatedAt);
+    if (fromDate) q = q.gte("created_at", fromDate);
+    if (toDate) q = q.lte("created_at", toDate);
+    if (type === "admin" && adminFilter) q = q.eq("admin_id", adminFilter);
+    if (type === "admin" && actionFilter) q = q.ilike("action", `%${actionFilter.replace(/[%_]/g, "")}%`);
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    const rows = data || [];
+    const hasMore = rows.length === limit;
+    const nextCursor = hasMore ? rows[rows.length - 1].created_at : null;
+
+    if (type === "admin") {
+      const map = await enrichWithProfiles(rows, ["admin_id"]);
+      const enriched = rows.map((r) => ({ ...r, admin_name: map[r.admin_id] || "Unknown" }));
+      return jsonResp({ logs: enriched, nextCursor, hasMore });
+    }
     if (type === "moderation") {
-      const { data, error } = await supabase
-        .from("moderation_history")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      const map = await enrichWithProfiles(data || [], ["moderator_id", "user_id"]);
-      const enriched = (data || []).map((r) => ({
+      const map = await enrichWithProfiles(rows, ["moderator_id", "user_id"]);
+      const enriched = rows.map((r) => ({
         ...r,
         moderator_name: map[r.moderator_id] || "Unknown",
         user_name: map[r.user_id] || "Unknown",
       }));
-      return jsonResp({ logs: enriched });
+      return jsonResp({ logs: enriched, nextCursor, hasMore });
     }
-
-    if (type === "llm") {
-      const { data, error } = await supabase
-        .from("llm_usage")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      return jsonResp({ logs: data || [] });
-    }
-
     if (type === "consent") {
-      const { data, error } = await supabase
-        .from("consent_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      const map = await enrichWithProfiles(data || [], ["user_id"]);
-      const enriched = (data || []).map((r) => ({ ...r, user_name: map[r.user_id] || "Unknown" }));
-      return jsonResp({ logs: enriched });
+      const map = await enrichWithProfiles(rows, ["user_id"]);
+      const enriched = rows.map((r) => ({ ...r, user_name: map[r.user_id] || "Unknown" }));
+      return jsonResp({ logs: enriched, nextCursor, hasMore });
     }
+    // llm
+    return jsonResp({ logs: rows, nextCursor, hasMore });
 
-    throw new Error("Invalid type");
+
   } catch (error) {
     console.error("admin-logs error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

@@ -4,6 +4,7 @@
  */
 
 import { getSupabaseClient } from './db.ts';
+import { redactPII } from './anonymize.ts';
 
 const POLZA_API_KEY = Deno.env.get('POLZA_API_KEY');
 const POLZA_EMBED_URL =
@@ -28,7 +29,10 @@ async function hashText(text: string): Promise<string> {
 }
 
 function normalizeText(s: string): string {
-  return s.replace(/\s+/g, ' ').replace(/\u00A0/g, ' ').trim();
+  // Обезличиваем перед нормализацией: эмбеддинги уходят к зарубежному провайдеру
+  // (Polza/OpenAI text-embedding-3-large), поэтому в input не должно быть прямых PII.
+  const redacted = redactPII(s);
+  return redacted.replace(/\s+/g, ' ').replace(/\u00A0/g, ' ').trim();
 }
 
 /**
@@ -138,7 +142,7 @@ export async function embedTextsWithCache(texts: string[]): Promise<number[][]> 
  * Сохраняет тексты как воспоминания пользователя с эмбеддингами.
  * Дедуп: чанки с cosine similarity > DEDUP_THRESHOLD к существующей памяти юзера пропускаются.
  */
-const DEDUP_THRESHOLD = 0.92;
+const DEDUP_THRESHOLD = 0.88;
 
 export async function ingestMemoriesForUser(
   userId: string,

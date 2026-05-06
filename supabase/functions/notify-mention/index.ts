@@ -24,38 +24,36 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { messageContent, senderName, senderId }: MentionNotificationRequest = await req.json();
 
-    console.log("Processing mention notification:", { messageContent, senderName, senderId });
-
-    if (!messageContent) {
+    if (!messageContent || typeof messageContent !== "string") {
       return new Response(
         JSON.stringify({ error: "Message content is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Extract mentions from message (@username pattern)
-    const mentionRegex = /@(\S+)/g;
-    const mentions: string[] = [];
+    // Extract mentions: only ASCII usernames (letters, digits, underscore, dot)
+    const mentionRegex = /@([a-zA-Z0-9_\.]+)/g;
+    const mentions = new Set<string>();
     let match;
-    
     while ((match = mentionRegex.exec(messageContent)) !== null) {
-      mentions.push(match[1]);
+      mentions.add(match[1].toLowerCase());
     }
 
-    if (mentions.length === 0) {
+    if (mentions.size === 0) {
       return new Response(
         JSON.stringify({ success: true, notified: 0 }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log("Found mentions:", mentions);
+    const mentionsArr = Array.from(mentions);
+    console.log("Found mentions:", mentionsArr);
 
-    // Find users by display_name, full_name, or username
+    // Find users by username only (display_name may have spaces and isn't a stable handle)
     const { data: mentionedUsers, error: usersError } = await supabase
       .from("profiles")
-      .select("user_id, display_name, full_name, username")
-      .or(mentions.map(m => `display_name.ilike.${m},full_name.ilike.${m},username.ilike.${m}`).join(","));
+      .select("user_id, display_name, username")
+      .in("username", mentionsArr);
 
     if (usersError) {
       console.error("Error finding mentioned users:", usersError);
@@ -65,8 +63,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Found mentioned users:", mentionedUsers);
-
     if (!mentionedUsers || mentionedUsers.length === 0) {
       return new Response(
         JSON.stringify({ success: true, notified: 0 }),
@@ -74,107 +70,68 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Filter out the sender from notifications
-    const usersToNotify = mentionedUsers.filter(u => u.user_id !== senderId);
+    const usersToNotify = mentionedUsers.filter((u) => u.user_id !== senderId);
 
-    // Get push subscriptions for mentioned users
-    const userIds = usersToNotify.map(u => u.user_id);
-    const { data: subscriptions, error: subsError } = await supabase
-      .from("push_subscriptions")
-      .select("*")
-      .in("user_id", userIds);
-
-    if (subsError) {
-      console.error("Error fetching subscriptions:", subsError);
+    if (usersToNotify.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Failed to fetch subscriptions" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({ success: true, notified: 0 }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log("Found subscriptions:", subscriptions?.length || 0);
+    const preview =
+      messageContent.length > 100 ? messageContent.slice(0, 100) + "..." : messageContent;
 
-    // Create in-app notifications for mentioned users
-    const notifications = usersToNotify.map(user => ({
+    // Create in-app notifications
+    const notifications = usersToNotify.map((user) => ({
       user_id: user.user_id,
+      actor_id: senderId,
       type: "mention",
       title: `${senderName} упомянул(а) вас`,
-      message: messageContent.length > 100 ? messageContent.slice(0, 100) + "..." : messageContent,
+      message: preview,
+      action_url: "/community",
+      metadata: { source: "community" },
     }));
 
-    if (notifications.length > 0) {
-      const { error: notifError } = await supabase
-        .from("system_notifications")
-        .insert(notifications);
+    const { error: notifError } = await supabase
+      .from("notifications")
+      .insert(notifications);
 
-      if (notifError) {
-        console.error("Error creating notifications:", notifError);
-      } else {
-        console.log("Created in-app notifications:", notifications.length);
-      }
+    if (notifError) {
+      console.error("Error creating notifications:", notifError);
     }
 
-    // Send push notifications using VAPID
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-
+    // Push notifications via unified push-dispatch
+    const userIds = usersToNotify.map((u) => u.user_id);
     let pushSentCount = 0;
-
-    if (subscriptions && subscriptions.length > 0 && vapidPublicKey && vapidPrivateKey) {
-      console.log("Sending push to", subscriptions.length, "subscriptions");
-      
-      for (const sub of subscriptions) {
-        try {
-          // Create JWT for VAPID
-          const header = { alg: "ES256", typ: "JWT" };
-          const now = Math.floor(Date.now() / 1000);
-          const payload = {
-            aud: new URL(sub.endpoint).origin,
-            exp: now + 12 * 60 * 60, // 12 hours
-            sub: "mailto:support@jiva.app"
-          };
-
-          // Create push notification payload
-          const pushPayload = JSON.stringify({
-            title: `${senderName} упомянул(а) вас`,
-            body: messageContent.length > 100 ? messageContent.slice(0, 100) + "..." : messageContent,
-            icon: "/icon-192.png",
-            badge: "/icon-192.png",
-            data: { url: "/community" }
-          });
-
-          // Send push notification via fetch to push service
-          const response = await fetch(sub.endpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/octet-stream",
-              "Content-Encoding": "aes128gcm",
-              "TTL": "86400",
-            },
-            body: pushPayload
-          });
-
-          if (response.ok) {
-            pushSentCount++;
-            console.log("Push sent successfully to:", sub.endpoint.slice(0, 50));
-          } else {
-            console.error("Push failed:", response.status, await response.text());
-          }
-        } catch (pushError) {
-          console.error("Error sending push to subscription:", pushError);
-        }
-      }
+    try {
+      const internalSecret = Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "";
+      const dispatchRes = await fetch(`${supabaseUrl}/functions/v1/push-dispatch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-internal-secret": internalSecret },
+        body: JSON.stringify({
+          user_ids: userIds,
+          type: "mention",
+          title: `${senderName} упомянул(а) вас`,
+          body: preview,
+          url: "/community",
+          tag: `mention:${senderId}`,
+        }),
+      });
+      const dj = await dispatchRes.json().catch(() => ({}));
+      pushSentCount = dj.sent ?? 0;
+    } catch (e) {
+      console.error("[notify-mention] dispatch error", e);
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         notified: usersToNotify.length,
-        pushSent: pushSentCount
+        pushSent: pushSentCount,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-
   } catch (error: any) {
     console.error("Error processing mention notification:", error);
     return new Response(

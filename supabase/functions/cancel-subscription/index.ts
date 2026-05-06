@@ -12,65 +12,95 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate JWT via anon client + getClaims
+    const anon = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await anon.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const userId = claimsData.claims.sub as string;
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
+    console.log('Cancelling subscription for user:', userId);
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      throw new Error('Unauthorized');
-    }
-
-    console.log('Cancelling subscription for user:', user.id);
-
-    // Mark subscription as cancelled but keep access until expires_at
     const { data: subscription, error: fetchError } = await supabase
       .from('subscriptions')
       .select('*')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', userId)
+      .eq('plan', 'premium')
+      .eq('status', 'active')
+      .maybeSingle();
 
     if (fetchError) {
       console.error('Error fetching subscription:', fetchError);
       throw fetchError;
     }
 
-    if (!subscription || subscription.plan === 'free' || subscription.status !== 'active') {
-      throw new Error('No active subscription to cancel');
+    if (!subscription) {
+      return new Response(
+        JSON.stringify({ error: 'No active subscription to cancel' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (subscription.canceled_at) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          alreadyCanceled: true,
+          message: 'Подписка уже отменена. Доступ сохранится до конца оплаченного периода.'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
     }
 
     const { error: updateError } = await supabase
       .from('subscriptions')
       .update({
-        cancelled_at: new Date().toISOString(),
+        canceled_at: new Date().toISOString(),
+        auto_renew: false,
+        // Очищаем сохранённый способ оплаты — cron-worker автопродления
+        // не сможет больше списывать с этой подписки.
+        yookassa_payment_method_id: null,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', user.id);
+      .eq('id', subscription.id);
 
     if (updateError) {
       console.error('Error cancelling subscription:', updateError);
       throw updateError;
     }
 
-    console.log('Subscription cancelled successfully for user:', user.id);
+    console.log('Subscription cancelled successfully for user:', userId);
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         message: 'Подписка отменена. Доступ сохранится до конца оплаченного периода.'
       }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
+        status: 200
       }
     );
 
@@ -79,11 +109,10 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 
+        status: 400
       }
     );
   }
 });
-

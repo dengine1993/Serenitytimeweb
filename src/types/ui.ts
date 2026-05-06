@@ -49,7 +49,6 @@ export interface EmotionFormData {
 export interface PostFormData {
   content: string;
   emotion_tags?: string[];
-  is_anonymous?: boolean;
   media_url?: string;
   media_type?: string;
 }

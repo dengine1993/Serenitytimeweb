@@ -1,5 +1,5 @@
 // App constants
-export const APP_NAME = "Безмятежные";
+export const APP_NAME = "Восход";
 export const WEEKLY_COOLDOWN_DAYS = 7;
 export const CRISIS_HELPLINE = "051";
 
@@ -15,8 +15,5 @@ export const VOICE_LIMITS = {
   PREMIUM_MINUTES: 20
 } as const;
 
-// Pricing (in RUB)
-export const PRICING = {
-  PREMIUM_MONTHLY: 490,
-  EXTRA_SESSION: 79
-} as const;
+// Цены берутся из app_config.product_catalog (см. usePricing) и
+// supabase/functions/_shared/products.ts. Не дублируем здесь, чтобы избежать рассинхрона.

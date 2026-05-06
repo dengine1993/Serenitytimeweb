@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { ArrowPathIcon } from '@heroicons/react/24/solid';
 import { PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { Sun } from 'lucide-react';
@@ -11,16 +11,6 @@ import { cn } from '@/lib/utils';
 import { useHomeTheme } from '@/hooks/useHomeTheme';
 import { getTodayInUserTimezone, getHoursUntilMidnight } from '@/lib/dateUtils';
 
-const JOY_PROMPTS = [
-  'Улыбнулся прохожему ☀️',
-  'Выпил вкусный кофе ☕',
-  'Поговорил с близким 💕',
-  'Заметил красивое небо 🌤',
-  'Закончил дело ✅',
-  'Погладил кота 🐈',
-];
-
-
 interface FeedComposerProps {
   onPostCreated?: () => void;
   showDailyLimit?: boolean;
@@ -28,24 +18,30 @@ interface FeedComposerProps {
 
 export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComposerProps) {
   const { user, loading } = useAuth();
-  const { t } = useI18n();
+  const { t, tArray } = useI18n();
   const { theme } = useHomeTheme();
-  const DRAFT_KEY = 'feed_draft';
+
+  // Per-user draft key — avoids cross-user leakage on shared devices
+  const DRAFT_KEY = useMemo(
+    () => (user?.id ? `feed_draft_${user.id}` : 'feed_draft_anon'),
+    [user?.id]
+  );
+
+  const [content, setContent] = useState('');
   
-  // Initialize content from localStorage draft
-  const [content, setContent] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(DRAFT_KEY) || '';
-    }
-    return '';
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dailyPostUsed, setDailyPostUsed] = useState(false);
   const [hoursUntilReset, setHoursUntilReset] = useState(0);
   const [userProfile, setUserProfile] = useState<{ display_name?: string; avatar_url?: string }>();
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
+
+  // Load draft when user (key) changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setContent(localStorage.getItem(DRAFT_KEY) || '');
+  }, [DRAFT_KEY]);
+
   // Save draft to localStorage
   useEffect(() => {
     if (content.trim()) {
@@ -53,7 +49,7 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
     } else {
       localStorage.removeItem(DRAFT_KEY);
     }
-  }, [content]);
+  }, [content, DRAFT_KEY]);
 
   // Auto-expand textarea
   useEffect(() => {
@@ -67,17 +63,17 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
   // Load user profile
   useEffect(() => {
     if (!user) return;
-    
+
     const loadProfile = async () => {
       const { data } = await supabase
         .from('profiles')
         .select('display_name, avatar_url')
         .eq('user_id', user.id)
         .maybeSingle();
-      
+
       if (data) setUserProfile(data);
     };
-    
+
     loadProfile();
   }, [user]);
 
@@ -86,7 +82,6 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
     if (!user || !showDailyLimit) return;
 
     const checkDailyLimit = async () => {
-      // Use user's timezone (default Moscow) for consistent date calculation
       const todayStr = getTodayInUserTimezone();
 
       const { data } = await supabase
@@ -95,7 +90,7 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
         .eq('user_id', user.id)
         .gte('created_at', `${todayStr}T00:00:00`)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setDailyPostUsed(true);
@@ -109,34 +104,25 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
   }, [user, showDailyLimit]);
 
   const handleSubmit = async () => {
-    // SECURITY: Check isSubmitting FIRST to prevent race condition
     if (isSubmitting) return;
-    
-    // Check if user is authenticated
+
     if (!user) {
-      toast.error('Войдите, чтобы написать пост');
+      toast.error(t('feed.composer.authRequired'));
       return;
     }
-    
+
     if (loading || !content.trim() || (showDailyLimit && dailyPostUsed)) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // Verify session is still valid
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
         console.error('Session check failed:', sessionError);
-        toast.error('Сессия истекла. Пожалуйста, войдите заново.');
+        toast.error(t('feed.composer.sessionExpired'));
         return;
       }
-
-      console.log('Attempting post insert:', { 
-        userId: user.id, 
-        contentLength: content.trim().length,
-        hasSession: !!session 
-      });
 
       const { data: post, error } = await supabase.from('posts').insert({
         user_id: user.id,
@@ -145,46 +131,30 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
       }).select('id, content').single();
 
       if (error) {
-        console.error('Post insert error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
+        console.error('Post insert error:', error);
         if (error.code === '23505') {
-          // Unique constraint violation (idx_posts_user_daily)
-          toast.error('Можно поделиться только одним моментом в день 🌟');
+          toast.error(t('feed.composer.onePerDay'));
           setDailyPostUsed(true);
           setHoursUntilReset(getHoursUntilMidnight());
         } else if (error.code === '42501') {
-          toast.error('Нет прав для публикации. Попробуйте перезайти.');
+          toast.error(t('feed.composer.noPermission'));
         } else {
-          toast.error('Не удалось опубликовать пост');
+          toast.error(t('feed.composer.genericFail'));
         }
         return;
       }
 
       setContent('');
-      localStorage.removeItem(DRAFT_KEY); // Clear draft on success
+      localStorage.removeItem(DRAFT_KEY);
       if (showDailyLimit) {
         setDailyPostUsed(true);
       }
-      toast.success('Радость записана! Спасибо, что поделился ☀️');
+      toast.success(t('feed.composer.successShort'));
       onPostCreated?.();
 
       // Trigger Jiva auto-comment (fire and forget)
-      console.log('[FeedComposer] Calling auto-comment-post for postId:', post.id);
       supabase.functions.invoke('auto-comment-post', {
-        body: { 
-          postId: post.id, 
-          postContent: post.content 
-        }
-      }).then(({ data, error }) => {
-        if (error) {
-          console.error('[FeedComposer] Auto-comment failed:', error);
-        } else {
-          console.log('[FeedComposer] Auto-comment triggered:', data);
-        }
+        body: { postId: post.id, postContent: post.content }
       }).catch(err => {
         console.error('[FeedComposer] Auto-comment error:', err);
       });
@@ -206,6 +176,7 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
   const MAX_LENGTH = 280;
   const charCount = content.length;
   const canSubmit = content.trim().length > 0 && !isSubmitting && !(showDailyLimit && dailyPostUsed);
+  const joyPrompts = tArray('feed.composer.prompts');
 
   // === "Daily joy already shared" celebratory state ===
   if (showDailyLimit && dailyPostUsed) {
@@ -232,14 +203,14 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
             "text-[14px] font-semibold leading-tight",
             theme === 'light' ? "text-amber-900" : "text-amber-200/95"
           )}>
-            Радость дня записана ✨
+            {t('feed.composer.dailyDoneTitle')}
           </p>
           <p className={cn(
             "text-[12px] leading-snug mt-0.5",
             theme === 'light' ? "text-amber-700/75" : "text-amber-200/55"
           )}>
-            Возвращайся завтра за новым моментом
-            {hoursUntilReset > 0 ? ` · через ~${hoursUntilReset}ч` : ''}
+            {t('feed.composer.dailyDoneDesc')}
+            {hoursUntilReset > 0 ? t('feed.composer.dailyDoneIn', { hours: hoursUntilReset }) : ''}
           </p>
         </div>
       </div>
@@ -247,7 +218,7 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
   }
 
   return (
-    <div 
+    <div
       data-feed-composer
       className={cn(
         "px-4 py-3 transition-all duration-200 border-b",
@@ -257,20 +228,18 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
       )}
     >
       <div className="flex gap-3">
-        {/* User Avatar */}
         <Avatar className="h-10 w-10 flex-shrink-0">
           <AvatarImage src={userProfile?.avatar_url} />
           <AvatarFallback className={cn(
             "text-sm font-medium",
-            theme === 'light' 
-              ? "bg-amber-100 text-amber-600" 
+            theme === 'light'
+              ? "bg-amber-100 text-amber-600"
               : "bg-amber-500/15 text-amber-400"
           )}>
             {userProfile?.display_name?.charAt(0)?.toUpperCase() || '?'}
           </AvatarFallback>
         </Avatar>
 
-        {/* Input area */}
         <div className="flex-1 min-w-0">
           <textarea
             ref={textareaRef}
@@ -279,7 +248,7 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
-            placeholder="Что хорошего случилось сегодня? ☀️"
+            placeholder={t('feed.composer.placeholderShort')}
             rows={1}
             className={cn(
               "w-full resize-none bg-transparent border-0 text-[15px] leading-[1.4] placeholder:text-muted-foreground/55 focus:outline-none py-2",
@@ -288,10 +257,9 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
             disabled={isSubmitting}
           />
 
-          {/* Prompt chips — shown when empty & not focused (lowers blank-page friction) */}
-          {!isFocused && content.length === 0 && (
+          {!isFocused && content.length === 0 && joyPrompts.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pt-1 pb-1">
-              {JOY_PROMPTS.slice(0, 3).map((prompt) => (
+              {joyPrompts.slice(0, 3).map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
@@ -312,14 +280,14 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
             </div>
           )}
 
-          {/* Footer row - only show when focused or has content */}
           {(isFocused || content.length > 0) && (
+            <>
             <div className="flex items-center justify-between pt-2 mt-2 border-t border-white/5">
               <div className="flex items-center gap-2">
                 <span className={cn(
                   "text-xs tabular-nums",
-                  charCount > MAX_LENGTH * 0.9 
-                    ? "text-amber-500" 
+                  charCount > MAX_LENGTH * 0.9
+                    ? "text-amber-500"
                     : theme === 'light' ? "text-gray-400" : "text-muted-foreground/50"
                 )}>
                   {charCount}/{MAX_LENGTH}
@@ -328,7 +296,7 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
                   "text-[11px] hidden sm:inline",
                   theme === 'light' ? "text-amber-700/60" : "text-amber-300/50"
                 )}>
-                  · Один момент в день. Завтра — снова ✨
+                  · {t('feed.composer.promptHint')}
                 </span>
               </div>
 
@@ -339,11 +307,11 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
                   "flex items-center justify-center h-8 w-8 rounded-full transition-all",
                   canSubmit
                     ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/30 hover:shadow-amber-500/50"
-                    : theme === 'light' 
-                      ? "bg-slate-100 text-slate-400" 
+                    : theme === 'light'
+                      ? "bg-slate-100 text-slate-400"
                       : "bg-white/5 text-muted-foreground/30"
                 )}
-                aria-label="Поделиться радостью"
+                aria-label={t('feed.composer.shareLabel')}
               >
                 {isSubmitting ? (
                   <ArrowPathIcon className="h-4 w-4 animate-spin" />
@@ -352,6 +320,7 @@ export function FeedComposer({ onPostCreated, showDailyLimit = false }: FeedComp
                 )}
               </button>
             </div>
+            </>
           )}
         </div>
       </div>

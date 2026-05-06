@@ -1,27 +1,20 @@
 {
-  "name": "Безмятежные - Социальная сеть поддержки",
-  "short_name": "Безмятежные",
+  "name": "Восход — путь к себе начинается с одного шага",
+  "short_name": "Восход",
   "version": "1.0.0",
-  "description": "Безопасное пространство для поддержки, общения и саморазвития людей с тревожными расстройствами",
+  "description": "Пространство для тех, кто хочет расти. Джива — твой тёплый AI-Друг и проводник, идёт рядом каждый день.",
   "start_url": "/",
   "scope": "/",
   "id": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
-  "background_color": "#0A0F18",
-  "theme_color": "#0A0F18",
+  "background_color": "#1a0a2e",
+  "theme_color": "#1a0a2e",
   "orientation": "portrait-primary",
   "categories": ["health", "lifestyle", "social"],
   "lang": "ru",
   "dir": "ltr",
   "prefer_related_applications": false,
-  "related_applications": [
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=app.lovable.bezmyatezhnye",
-      "id": "app.lovable.bezmyatezhnye"
-    }
-  ],
   "icons": [
     {
       "src": "/icon-72.png",
@@ -76,14 +69,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
     }
   ],
   "shortcuts": [

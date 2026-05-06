@@ -159,6 +159,23 @@ export function useCommentReactions(commentId: string): UseCommentReactionsResul
     };
 
     fetchReactions();
+
+    // Realtime: реакции других пользователей появляются без перезагрузки
+    const channel = supabase
+      .channel(`comment-reactions-${commentId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'story_comment_reactions',
+        filter: `comment_id=eq.${commentId}`
+      }, () => {
+        fetchReactions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [commentId, user]);
 
   const toggleReaction = useCallback(async (type: ReactionType) => {

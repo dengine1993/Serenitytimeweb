@@ -132,10 +132,6 @@ export const StepSoftAuth = ({ onNext, onboardingData }: StepSoftAuthProps) => {
                     </Button>
                 </TabsContent>
             </Tabs>
-
-            <p className="text-xs text-white/65 mt-4">
-                Регистрируясь, ты принимаешь условия использования и политику конфиденциальности
-            </p>
         </motion.div>
     );
 };

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { AdminRoute } from "./AdminRoute";
 import { AdminSidebar } from "./AdminSidebar";
 import { useModerationRealtime } from "@/hooks/useModerationRealtime";
@@ -14,19 +15,19 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {
+  const location = useLocation();
   const [newReportsCount, setNewReportsCount] = useState(0);
 
-  // Subscribe to realtime moderation updates
   useModerationRealtime(() => {
-    setNewReportsCount(prev => prev + 1);
+    setNewReportsCount((prev) => prev + 1);
   });
 
-  // Reset counter when on moderation page
+  // Reset counter when navigating to moderation page (client-side routing aware)
   useEffect(() => {
-    if (window.location.pathname === '/admin/moderation') {
+    if (location.pathname === '/admin/moderation') {
       setNewReportsCount(0);
     }
-  }, []);
+  }, [location.pathname]);
 
   return (
     <AdminRoute>

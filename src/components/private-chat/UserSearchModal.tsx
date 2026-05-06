@@ -10,6 +10,7 @@ import { usePrivateChats } from '@/hooks/usePrivateChats';
 import { useFriends } from '@/hooks/useFriends';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface UserSearchModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ interface SearchResult {
 
 export function UserSearchModal({ open, onOpenChange, onConversationCreated }: UserSearchModalProps) {
   const { user } = useAuth();
+  const { t } = useI18n();
   const { startConversation } = usePrivateChats();
   const { isFriend, hasPendingRequest, sendFriendRequest } = useFriends();
   const [query, setQuery] = useState('');
@@ -51,34 +53,32 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
 
   const handleStartChat = async (userId: string) => {
     setProcessingUsers(prev => new Set(prev).add(userId));
-    
+
     try {
       const result = await startConversation(userId);
-      
+
       if (result.conversationId) {
-        toast.success('Чат создан');
+        toast.success(t('privateChat.toasts.chatCreated'));
         onConversationCreated?.(result.conversationId);
         onOpenChange(false);
       } else if (result.blocked) {
-        toast.error('Пользователь не принимает сообщения');
+        toast.error(t('privateChat.toasts.userDoesNotAccept'));
       } else if (result.needsFriend) {
-        // Offer to send friend request
-        toast.info('Этот пользователь принимает сообщения только от друзей');
+        toast.info(t('privateChat.toasts.friendsOnly'));
         const friendResult = await sendFriendRequest(userId);
         if (friendResult.success) {
-          toast.success('Запрос в друзья отправлен');
+          toast.success(t('privateChat.toasts.friendRequestSent'));
         } else if (friendResult.alreadyFriends) {
-          // Should not happen but retry
           const retryResult = await startConversation(userId);
           if (retryResult.conversationId) {
             onConversationCreated?.(retryResult.conversationId);
             onOpenChange(false);
           }
         } else if (friendResult.alreadySent) {
-          toast.info('Запрос в друзья уже отправлен');
+          toast.info(t('privateChat.toasts.friendRequestAlreadySent'));
         }
       } else if (result.error) {
-        toast.error('Не удалось начать чат');
+        toast.error(t('privateChat.toasts.startChatFailed'));
       }
     } finally {
       setProcessingUsers(prev => {
@@ -95,11 +95,11 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
     try {
       const result = await sendFriendRequest(userId);
       if (result.success) {
-        toast.success('Запрос отправлен');
+        toast.success(t('privateChat.toasts.requestSent'));
       } else if (result.alreadyFriends) {
-        toast.info('Вы уже друзья');
+        toast.info(t('privateChat.toasts.alreadyFriends'));
       } else if (result.alreadySent) {
-        toast.info('Запрос уже отправлен');
+        toast.info(t('privateChat.toasts.requestAlreadySent'));
       }
     } finally {
       setProcessingUsers(prev => {
@@ -114,7 +114,7 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Новый личный чат</DialogTitle>
+          <DialogTitle>{t('privateChat.search.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -126,7 +126,7 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Имя или @username"
+                placeholder={t('privateChat.search.placeholder')}
                 className="pl-9"
               />
             </div>
@@ -134,7 +134,7 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
               {isSearching ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Найти'
+                t('privateChat.search.find')
               )}
             </Button>
           </div>
@@ -143,12 +143,12 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
           <div className="max-h-[300px] overflow-y-auto space-y-2">
             {results.length === 0 && query && !isSearching && (
               <p className="text-center text-sm text-muted-foreground py-4">
-                Никого не найдено
+                {t('privateChat.search.noResults')}
               </p>
             )}
             
             {results.map((profile) => {
-              const name = profile.display_name || 'Пользователь';
+              const name = profile.display_name || t('privateChat.screen.user');
               const isProcessing = processingUsers.has(profile.user_id);
               const isUserFriend = isFriend(profile.user_id);
               const pendingStatus = hasPendingRequest(profile.user_id);
@@ -190,7 +190,7 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
                         onClick={() => handleAddFriend(profile.user_id)}
                         disabled={isProcessing}
                         className="h-9 w-9 rounded-full"
-                        title="Добавить в друзья"
+                        title={t('privateChat.search.addFriend')}
                       >
                         <UserPlus className="h-4 w-4" />
                       </Button>
@@ -208,7 +208,7 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
                       ) : (
                         <>
                           <MessageCircle className="h-4 w-4 mr-1" />
-                          Написать
+                          {t('privateChat.search.write')}
                         </>
                       )}
                     </Button>
@@ -219,7 +219,7 @@ export function UserSearchModal({ open, onOpenChange, onConversationCreated }: U
           </div>
 
           <p className="text-xs text-muted-foreground text-center">
-            Сообщения отправляются напрямую. Пользователи могут ограничить входящие сообщения в настройках.
+            {t('privateChat.search.footer')}
           </p>
         </div>
       </DialogContent>

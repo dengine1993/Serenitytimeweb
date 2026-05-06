@@ -3,9 +3,13 @@ import App from "./App.tsx";
 import "./index.css";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { migrateStorage } from "./lib/storage";
+import { initSentry } from "./lib/sentry";
 
 // Network status monitor (shows toasts on connection changes)
 import { useNetworkStatus } from "./hooks/useNetworkStatus";
+
+// Init Sentry (no-op if VITE_SENTRY_DSN not set)
+initSentry();
 
 // Migrate storage before app renders
 migrateStorage();

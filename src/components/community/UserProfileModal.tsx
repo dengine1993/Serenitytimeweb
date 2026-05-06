@@ -5,7 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFriends } from '@/hooks/useFriends';
 import { usePrivateChats } from '@/hooks/usePrivateChats';
 import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { ru, enUS } from 'date-fns/locale';
+import { useI18n } from '@/hooks/useI18n';
 import { 
   MessageCircle, 
   UserPlus, 
@@ -33,7 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { UserReportModal } from './UserReportModal';
+
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { CEO_USER_ID } from '@/lib/constants';
@@ -64,10 +65,11 @@ export function UserProfileModal({
   onStartChat 
 }: UserProfileModalProps) {
   const { user } = useAuth();
+  const { t, language } = useI18n();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
+  
   
   const { 
     isFriend, 
@@ -122,9 +124,9 @@ export function UserProfileModal({
         onOpenChange(false);
         onStartChat?.(result.conversationId);
       } else if (result?.needsFriend) {
-        toast.error('Пользователь принимает сообщения только от друзей');
+        toast.error(t('community.profile.errors.friendsOnly'));
       } else if (result?.blocked) {
-        toast.error('Пользователь не принимает личные сообщения');
+        toast.error(t('community.profile.errors.doesNotAccept'));
       }
     } catch (error) {
       console.error('Failed to start conversation:', error);
@@ -151,26 +153,26 @@ export function UserProfileModal({
     if (!userId) return;
     await blockUser(userId);
     onOpenChange(false);
-    toast.success('Пользователь заблокирован');
+    toast.success(t('community.profile.blocked'));
   };
 
   const getFriendButtonContent = () => {
-    if (!userId) return { icon: UserPlus, label: 'В друзья', variant: 'outline' as const };
-    
+    if (!userId) return { icon: UserPlus, label: t('community.profile.addFriend'), variant: 'outline' as const };
+
     if (isFriend(userId)) {
-      return { icon: UserCheck, label: 'Друзья', variant: 'secondary' as const };
+      return { icon: UserCheck, label: t('community.profile.friends'), variant: 'secondary' as const };
     }
-    
+
     const incomingRequest = getIncomingRequest(userId);
     if (incomingRequest) {
-      return { icon: UserPlus, label: 'Принять', variant: 'default' as const };
+      return { icon: UserPlus, label: t('community.profile.accept'), variant: 'default' as const };
     }
-    
+
     if (hasPendingRequest(userId)) {
-      return { icon: Clock, label: 'Отправлено', variant: 'outline' as const };
+      return { icon: Clock, label: t('community.profile.sent'), variant: 'outline' as const };
     }
-    
-    return { icon: UserPlus, label: 'В друзья', variant: 'outline' as const };
+
+    return { icon: UserPlus, label: t('community.profile.addFriend'), variant: 'outline' as const };
   };
 
   const friendButton = getFriendButtonContent();
@@ -180,7 +182,7 @@ export function UserProfileModal({
   const emojiIndex = userId ? userId.charCodeAt(0) % EMOJI_AVATARS.length : 0;
   const emojiAvatar = EMOJI_AVATARS[emojiIndex];
   
-  const displayName = profile?.display_name || 'Аноним';
+  const displayName = profile?.display_name || t('community.profile.anonymous');
   const isOwnProfile = user?.id === userId;
 
   return (
@@ -210,11 +212,11 @@ export function UserProfileModal({
                     className="relative"
                   >
                     {userId === CEO_USER_ID ? (
-                      <div className="h-28 w-28 rounded-full p-1 bg-gradient-to-br from-primary via-primary/70 to-secondary">
-                        <div className="w-full h-full rounded-full bg-background border-4 border-background flex items-center justify-center overflow-hidden">
-                          <CEOAvatar size="lg" className="!h-24 !w-24" />
-                        </div>
-                      </div>
+                      <CEOAvatar
+                        size="lg"
+                        className="!h-28 !w-28"
+                        avatarUrl={profile.avatar_url}
+                      />
                     ) : (
                       <>
                         {/* Premium ring */}
@@ -274,7 +276,7 @@ export function UserProfileModal({
                     ) : (
                       <MessageCircle className="h-5 w-5" />
                     )}
-                    <span className="font-medium">Чат</span>
+                    <span className="font-medium">{t('community.profile.chat')}</span>
                   </Button>
                   
                   {/* Friend button */}
@@ -287,16 +289,6 @@ export function UserProfileModal({
                     <span className="font-medium">{friendButton.label}</span>
                   </Button>
                   
-                  {/* Report Button - visible */}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setShowReportModal(true)}
-                    className="h-12 w-12 rounded-xl text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-                    title="Пожаловаться"
-                  >
-                    <Flag className="h-5 w-5" />
-                  </Button>
                   
                   {/* Block Button */}
                   <Button
@@ -304,7 +296,7 @@ export function UserProfileModal({
                     size="icon"
                     onClick={handleBlock}
                     className="h-12 w-12 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
-                    title="Заблокировать"
+                    title={t('community.profile.block')}
                   >
                     <Ban className="h-5 w-5" />
                   </Button>
@@ -326,9 +318,11 @@ export function UserProfileModal({
                     </div>
                     <div>
                       <p className="text-sm font-medium text-foreground">
-                        С нами с {format(new Date(profile.created_at), 'MMMM yyyy', { locale: ru })}
+                        {t('community.profile.memberSince', {
+                          date: format(new Date(profile.created_at), 'MMMM yyyy', { locale: language === 'ru' ? ru : enUS }),
+                        })}
                       </p>
-                      <p className="text-xs text-muted-foreground">Дата регистрации</p>
+                      <p className="text-xs text-muted-foreground">{t('community.profile.registrationDate')}</p>
                     </div>
                   </div>
                   
@@ -339,9 +333,9 @@ export function UserProfileModal({
                       </div>
                       <div>
                         <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                          Premium участник
+                          {t('community.profile.premiumMember')}
                         </p>
-                        <p className="text-xs text-amber-500/70">Подписка активна</p>
+                        <p className="text-xs text-amber-500/70">{t('community.profile.premiumActive')}</p>
                       </div>
                     </div>
                   )}
@@ -351,22 +345,12 @@ export function UserProfileModal({
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <span className="text-4xl mb-4">🔍</span>
-              <p>Пользователь не найден</p>
+              <p>{t('community.profile.userNotFound')}</p>
             </div>
           )}
         </SheetContent>
       </Sheet>
       
-      {/* Report modal */}
-      {userId && profile && (
-        <UserReportModal
-          userId={userId}
-          userName={profile.display_name || 'Аноним'}
-          isOpen={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          onBlockUser={handleBlock}
-        />
-      )}
     </>
   );
 }

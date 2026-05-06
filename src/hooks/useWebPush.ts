@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { isNativePlatform } from "@/lib/platform";
 
 export function useWebPush() {
   const { user } = useAuth();
@@ -10,6 +11,13 @@ export function useWebPush() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
 
   useEffect(() => {
+    // В нативной обёртке (Capacitor) Web Push API не работает —
+    // здесь нужен @capacitor/push-notifications (FCM/APNs), вне скоупа MVP.
+    if (isNativePlatform()) {
+      setIsSupported(false);
+      return;
+    }
+
     // Check if Push API is supported
     const supported = 'serviceWorker' in navigator && 'PushManager' in window;
     setIsSupported(supported);
@@ -72,9 +80,14 @@ export function useWebPush() {
         await navigator.serviceWorker.ready;
       }
 
-      // VAPID public key
-      const vapidPublicKey = 'BE3X9cH3xPBCKl_a6FTPBVsEZjbjzkvUkxSWKBhTFPXGOF5fJ56udyIQ8PuTOyXf19aJ0mMyKeehHwtdyRpGXpk';
-      
+      // Fetch VAPID public key from edge function (single source of truth with server)
+      const { data: vapidData, error: vapidErr } = await supabase.functions.invoke("get-vapid-public-key");
+      if (vapidErr || !vapidData?.publicKey) {
+        console.error("Failed to fetch VAPID public key:", vapidErr);
+        return null;
+      }
+      const vapidPublicKey = vapidData.publicKey as string;
+
       // Convert VAPID key to Uint8Array
       const urlBase64ToUint8Array = (base64String: string) => {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);

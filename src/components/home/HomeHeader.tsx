@@ -5,13 +5,12 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { ArrowRightOnRectangleIcon, Cog6ToothIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import logoBezm from '@/assets/logo-bezm.png';
-import { toast } from 'sonner';
 import { useI18n } from '@/hooks/useI18n';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { Crown } from 'lucide-react';
+import { Crown, Flame } from 'lucide-react';
+import { useMoodEntries } from '@/hooks/useMoodEntries';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,8 +28,10 @@ interface HomeHeaderProps {
 export function HomeHeader({ userName, isPremium, avatarUrl }: HomeHeaderProps) {
   const navigate = useNavigate();
   const { t } = useI18n();
-  const { user } = useAuth();
+  const { signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { stats } = useMoodEntries();
+  const streak = stats?.streak ?? 0;
   const [greeting, setGreeting] = useState('Добрый вечер');
 
   useEffect(() => {
@@ -47,12 +48,10 @@ export function HomeHeader({ userName, isPremium, avatarUrl }: HomeHeaderProps) 
   }, []);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error('Ошибка при выходе');
-    } else {
-      toast.success('Вы вышли из аккаунта');
-      navigate('/');
+    try {
+      await signOut();
+    } catch {
+      // signOut уже показывает toast с ошибкой
     }
   };
 
@@ -72,12 +71,12 @@ export function HomeHeader({ userName, isPremium, avatarUrl }: HomeHeaderProps) 
         >
           <img 
             src={logoBezm} 
-            alt="Безмятежные" 
-            className="w-8 h-8 object-contain drop-shadow-md -translate-y-0.5"
+            alt="Восход" 
+            className="w-11 h-11 sm:w-12 sm:h-12 object-contain drop-shadow-md -translate-y-0.5"
           />
         </motion.div>
-        <span className="text-lg font-bold bg-clip-text text-transparent hidden sm:inline bg-gradient-to-r from-amber via-amber to-amber/80">
-          БЕЗМЯТЕЖНЫЕ
+        <span className="text-lg font-bold tracking-[0.18em] bg-clip-text text-transparent hidden sm:inline bg-gradient-to-r from-orange-400 via-amber-300 to-rose-300">
+          ВОСХОД
         </span>
       </Link>
 
@@ -88,29 +87,32 @@ export function HomeHeader({ userName, isPremium, avatarUrl }: HomeHeaderProps) 
         transition={{ delay: 0.2, duration: 0.5 }}
         className="flex-1 flex items-center justify-center px-2 sm:px-4"
       >
-        <h1 className="text-lg sm:text-xl md:text-2xl font-semibold leading-none">
-          {/* Mobile: greeting with name */}
-          <span className="sm:hidden bg-clip-text text-transparent bg-gradient-to-r from-amber via-amber to-amber/80">
-            Привет, {userName}
-          </span>
-          {/* Desktop: full greeting with name */}
-          <span className="hidden sm:inline">
-            <span className="text-foreground/80">
-              {greeting},
-            </span>
-            {' '}
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-base sm:text-xl md:text-2xl font-semibold leading-none truncate">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber via-amber to-amber/80">
-              {userName}
+              {greeting}
             </span>
-            {isPremium && (
-              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full 
-                bg-gradient-to-r from-amber-500/20 to-orange-500/20 
-                text-amber-500 text-xs font-medium align-middle">
-                <Crown className="w-3 h-3" />
-              </span>
-            )}
-          </span>
-        </h1>
+            <span className="text-foreground/70 hidden sm:inline">, {userName}</span>
+          </h1>
+          {streak > 0 && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                bg-orange-500/15 text-orange-300 text-xs font-semibold align-middle
+                border border-orange-400/20 shrink-0"
+              aria-label={`Стрик ${streak} дней`}
+            >
+              <Flame className="w-3 h-3" />
+              {streak}
+            </span>
+          )}
+          {isPremium && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+              bg-gradient-to-r from-amber-500/20 to-orange-500/20
+              text-amber-400 text-xs font-medium align-middle shrink-0">
+              <Crown className="w-3 h-3" />
+            </span>
+          )}
+        </div>
       </motion.div>
       
       {/* Действия справа */}

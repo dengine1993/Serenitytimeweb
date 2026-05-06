@@ -36,14 +36,6 @@ const DEFAULT_PRODUCTS: Record<string, any> = {
     paymentType: 'subscription',
     entitlement: { kind: 'subscription', plan: 'premium', intervalMonths: 1 },
   },
-  premium_subscription_yearly: {
-    id: 'premium_subscription_yearly',
-    name: 'Premium Yearly',
-    description: 'Годовая подписка Premium',
-    amount: { value: 6990, currency: 'RUB' },
-    paymentType: 'subscription',
-    entitlement: { kind: 'subscription', plan: 'premium', intervalMonths: 12 },
-  },
 };
 
 const ALLOWED_PRODUCT_IDS = new Set(Object.keys(DEFAULT_PRODUCTS));

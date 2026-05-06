@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -16,6 +16,13 @@ interface DashboardStats {
   abuseUsers: number;
 }
 
+interface FinanceStats {
+  mrr: number;
+  netRevenue: number;
+  activeSubs: number;
+  avgCheck: number;
+}
+
 interface GrowthData {
   date: string;
   label: string;
@@ -23,46 +30,29 @@ interface GrowthData {
   new: number;
 }
 
+const REALTIME_DEBOUNCE_MS = 5_000;
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [finance, setFinance] = useState<FinanceStats | null>(null);
   const [growthData, setGrowthData] = useState<GrowthData[]>([]);
   const [loading, setLoading] = useState(true);
+  const debounceRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    loadDashboardData();
-
-    const profilesChannel = supabase
-      .channel('admin-dashboard-profiles')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
-        const newUser = payload.new as any;
-        toast.success(`Новый пользователь: ${newUser.display_name || newUser.username || 'Аноним'}`);
-        loadDashboardData();
-      })
-      .subscribe();
-
-    const postsChannel = supabase
-      .channel('admin-dashboard-posts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
-        loadDashboardData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(profilesChannel);
-      supabase.removeChannel(postsChannel);
-    };
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase.functions.invoke('analytics-dashboard');
+      const [analytics, payments] = await Promise.all([
+        supabase.functions.invoke('analytics-dashboard'),
+        supabase.functions.invoke('admin-payments', { body: { mode: 'list', tab: 'subscriptions', page: 1, pageSize: 1 } }),
+      ]);
 
-      if (error) throw error;
-      if (!data || data.error) throw new Error(data?.error || 'Empty response');
+      if (analytics.error) throw analytics.error;
+      if (!analytics.data || analytics.data.error) throw new Error(analytics.data?.error || 'Empty response');
 
+      const data = analytics.data;
       setStats({
         totalUsers: data.stats.totalUsers || 0,
         activeUsers7d: data.stats.activeUsers7d || 0,
@@ -79,13 +69,64 @@ export default function AdminDashboard() {
           new: g.new,
         }))
       );
+
+      // Finance stats (best-effort, не блокируем дашборд при ошибке)
+      if (!payments.error && payments.data?.stats) {
+        const s = payments.data.stats;
+        setFinance({
+          mrr: Number(s.mrr) || 0,
+          netRevenue: Number(s.netRevenue) || 0,
+          activeSubs: Number(s.activeSubs) || 0,
+          avgCheck: Number(s.avgCheck) || 0,
+        });
+      }
     } catch (error) {
       console.error("Error loading dashboard:", error);
       toast.error("Ошибка загрузки данных");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Debounced reload to avoid hammering the edge function on bursts of realtime events.
+  const scheduleReload = useCallback(() => {
+    if (debounceRef.current !== null) {
+      window.clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null;
+      loadDashboardData();
+    }, REALTIME_DEBOUNCE_MS);
+  }, [loadDashboardData]);
+
+  useEffect(() => {
+    loadDashboardData();
+
+    const profilesChannel = supabase
+      .channel('admin-dashboard-profiles')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
+        const newUser = payload.new as any;
+        toast.success(`Новый пользователь: ${newUser.display_name || newUser.username || 'Аноним'}`);
+        scheduleReload();
+      })
+      .subscribe();
+
+    const postsChannel = supabase
+      .channel('admin-dashboard-posts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        scheduleReload();
+      })
+      .subscribe();
+
+    return () => {
+      if (debounceRef.current !== null) {
+        window.clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(postsChannel);
+    };
+  }, [loadDashboardData, scheduleReload]);
 
   const metricCards = [
     { title: "Всего пользователей", value: stats?.totalUsers || 0, icon: Users, color: "text-blue-400" },
@@ -132,6 +173,33 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
+      {/* Finance row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">MRR</p>
+            <p className="text-2xl font-bold mt-1">{(finance?.mrr ?? 0).toLocaleString('ru-RU')} ₽</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Выручка (нетто)</p>
+            <p className="text-2xl font-bold mt-1">{(finance?.netRevenue ?? 0).toLocaleString('ru-RU')} ₽</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Активные подписки</p>
+            <p className="text-2xl font-bold mt-1">{(finance?.activeSubs ?? 0).toLocaleString('ru-RU')}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Средний чек</p>
+            <p className="text-2xl font-bold mt-1">{(finance?.avgCheck ?? 0).toLocaleString('ru-RU')} ₽</p>
+          </CardContent>
+        </Card>
+      </div>
       {/* Metrics grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {metricCards.map((card, index) => (

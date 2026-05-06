@@ -1,4 +1,4 @@
-# Руководство по настройке платформы "Безмятежные"
+# Руководство по настройке платформы "Восход"
 
 ## ✅ Выполнено
 
@@ -59,7 +59,7 @@ https://qdulrlhiuldixxcnqlzb.supabase.co/auth/v1/callback
 
 #### Шаг 4: Consent Screen
 В Google Cloud Console настройте Consent Screen:
-- **App name**: Безмятежные
+- **App name**: Восход
 - **User support email**: ваш email
 - **Developer contact**: ваш email
 - **Authorized domains**: добавьте `lovable.app` и `supabase.co`

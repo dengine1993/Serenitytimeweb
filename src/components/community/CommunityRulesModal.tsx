@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { HeartHandshake, Shield, Ban, Megaphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '@/hooks/useI18n';
 
 interface CommunityRulesModalProps {
   onAccept: () => void;
@@ -13,17 +14,17 @@ interface CommunityRulesModalProps {
 export function CommunityRulesModal({ onAccept, isLoggedIn }: CommunityRulesModalProps) {
   const [accepted, setAccepted] = useState(false);
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const rules = [
-    { icon: HeartHandshake, text: 'Здесь только поддержка и доброта', color: 'text-pink-500' },
-    
-    { icon: Shield, text: 'Репорт нарушений через долгое нажатие', color: 'text-emerald-500' },
-    { icon: Ban, text: 'Негатив и токсичность — бан', color: 'text-red-500' },
+    { icon: HeartHandshake, text: t('community.rules.items.kindness'), color: 'text-pink-500' },
+    { icon: Shield, text: t('community.rules.items.report'), color: 'text-emerald-500' },
+    { icon: Ban, text: t('community.rules.items.noToxicity'), color: 'text-red-500' },
   ];
 
   const criticalRule = {
     icon: Megaphone,
-    text: 'Реклама и спам — бан навсегда',
+    text: t('community.rules.critical'),
     color: 'text-orange-500',
   };
 
@@ -46,10 +47,10 @@ export function CommunityRulesModal({ onAccept, isLoggedIn }: CommunityRulesModa
               <HeartHandshake className="h-10 w-10 text-pink-500" />
             </motion.div>
             <h1 className="text-2xl font-bold text-foreground mb-2">
-              Правила Сообщества
+              {t('community.rules.title')}
             </h1>
             <p className="text-muted-foreground text-sm">
-              Это безопасное пространство для всех ❤️
+              {t('community.rules.subtitle')}
             </p>
           </div>
 
@@ -100,7 +101,7 @@ export function CommunityRulesModal({ onAccept, isLoggedIn }: CommunityRulesModa
               htmlFor="accept-rules"
               className="text-sm font-medium text-foreground cursor-pointer"
             >
-              Я принимаю правила сообщества
+              {t('community.rules.accept')}
             </label>
           </div>
 
@@ -111,7 +112,7 @@ export function CommunityRulesModal({ onAccept, isLoggedIn }: CommunityRulesModa
               disabled={!accepted}
               className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 disabled:opacity-50"
             >
-              Войти в Сообщество
+              {t('community.rules.enter')}
             </Button>
           ) : (
             <div className="space-y-3">
@@ -120,10 +121,10 @@ export function CommunityRulesModal({ onAccept, isLoggedIn }: CommunityRulesModa
                 disabled={!accepted}
                 className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 disabled:opacity-50"
               >
-                Войти или зарегистрироваться
+                {t('community.rules.loginCta')}
               </Button>
               <p className="text-center text-xs text-muted-foreground">
-                Для участия в чате нужна авторизация
+                {t('community.rules.loginHint')}
               </p>
             </div>
           )}

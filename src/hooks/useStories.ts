@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -7,13 +7,13 @@ export interface UserStory {
   user_id: string;
   title: string | null;
   content: string;
-  is_anonymous: boolean;
   is_hidden: boolean;
   comment_count: number;
   last_comment_at: string | null;
   created_at: string;
   updated_at: string;
   author?: {
+    user_id?: string;
     display_name: string | null;
     avatar_url: string | null;
   };
@@ -28,6 +28,38 @@ interface UseStoriesOptions {
 }
 
 const STORIES_PER_PAGE = 20;
+export const STORY_MIN_LENGTH = 30;
+export const STORY_MAX_LENGTH = 10000;
+
+// Экранирование для PostgREST `or(... ilike.%...%)` — спецсимволы ломают фильтр.
+function escapeIlikePattern(input: string): string {
+  return input
+    .replace(/\\/g, '\\\\')
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_')
+    .replace(/,/g, '\\,')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)')
+    .replace(/\*/g, '\\*');
+}
+
+async function fetchAuthorMap(userIds: string[]) {
+  if (userIds.length === 0) {
+    return {
+      profileMap: new Map<string, UserStory['author']>(),
+      premiumSet: new Set<string>(),
+    };
+  }
+  const [profilesRes, premiumRes] = await Promise.all([
+    supabase.from('profiles').select('user_id, display_name, avatar_url').in('user_id', userIds),
+    supabase.rpc('get_premium_user_ids', { user_ids: userIds }),
+  ]);
+  const profileMap = new Map<string, UserStory['author']>(
+    (profilesRes.data || []).map(p => [p.user_id, p as UserStory['author']])
+  );
+  const premiumSet = new Set<string>((premiumRes.data as string[] | null) || []);
+  return { profileMap, premiumSet };
+}
 
 export function useStories({ sortBy, searchQuery }: UseStoriesOptions) {
   const { user } = useAuth();
@@ -35,190 +67,191 @@ export function useStories({ sortBy, searchQuery }: UseStoriesOptions) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
 
-  const loadStories = useCallback(async (reset = false) => {
-    const currentPage = reset ? 0 : page;
-    
-    if (reset) {
-      setIsLoading(true);
-    } else {
-      setIsLoadingMore(true);
-    }
+  // Offset + token: защищают от race при быстрой смене сортировки/поиска.
+  const offsetRef = useRef(0);
+  const fetchTokenRef = useRef(0);
 
-    try {
-      let query = supabase
-        .from('user_stories')
-        .select('*')
-        .eq('is_hidden', false)
-        .range(currentPage * STORIES_PER_PAGE, (currentPage + 1) * STORIES_PER_PAGE - 1);
-
-      // Apply sorting
-      if (sortBy === 'comments') {
-        query = query.order('last_comment_at', { ascending: false, nullsFirst: false })
-                     .order('created_at', { ascending: false });
-      } else if (sortBy === 'newest') {
-        query = query.order('created_at', { ascending: false });
-      } else if (sortBy === 'mine' && user) {
-        query = supabase
-          .from('user_stories')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .range(currentPage * STORIES_PER_PAGE, (currentPage + 1) * STORIES_PER_PAGE - 1);
+  const loadStories = useCallback(
+    async (reset: boolean) => {
+      const myToken = ++fetchTokenRef.current;
+      if (reset) {
+        offsetRef.current = 0;
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
       }
 
-      // Apply search filter
-      if (searchQuery && searchQuery.trim()) {
-        query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
-      }
+      const from = offsetRef.current;
+      const to = from + STORIES_PER_PAGE - 1;
 
-      const { data: storiesData, error } = await query;
+      try {
+        let query =
+          sortBy === 'mine' && user
+            ? supabase.from('user_stories').select('*').eq('user_id', user.id)
+            : supabase.from('user_stories').select('*').eq('is_hidden', false);
 
-      if (error) {
-        console.error('Error loading stories:', error);
-        return;
-      }
-
-      if (storiesData) {
-        // Fetch author profiles (for non-anonymous)
-        const nonAnonymousStories = storiesData.filter(s => !s.is_anonymous);
-        const userIds = [...new Set(nonAnonymousStories.map(s => s.user_id))];
-
-        let profileMap = new Map<string, { display_name: string | null; avatar_url: string | null }>();
-        let premiumUserIds = new Set<string>();
-
-        if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, display_name, avatar_url')
-            .in('user_id', userIds);
-
-          const { data: premiumIds } = await supabase
-            .rpc('get_premium_user_ids', { user_ids: userIds });
-
-          profileMap = new Map(profiles?.map(p => [p.user_id, { display_name: p.display_name, avatar_url: p.avatar_url }]) || []);
-          premiumUserIds = new Set(premiumIds || []);
+        if (sortBy === 'comments') {
+          query = query
+            .order('last_comment_at', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false });
+        } else {
+          query = query.order('created_at', { ascending: false });
         }
 
-        const processedStories: UserStory[] = storiesData.map(story => ({
-          ...story,
-          author: story.is_anonymous ? undefined : profileMap.get(story.user_id),
-          is_premium: premiumUserIds.has(story.user_id)
+        if (searchQuery && searchQuery.trim()) {
+          const q = escapeIlikePattern(searchQuery.trim());
+          query = query.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
+        }
+
+        query = query.range(from, to);
+
+        const { data, error } = await query;
+
+        if (myToken !== fetchTokenRef.current) return;
+
+        if (error) {
+          console.error('Error loading stories:', error);
+          setHasMore(false);
+          return;
+        }
+
+        const rows = data || [];
+        const userIds = [...new Set(rows.map(s => s.user_id))];
+        const { profileMap, premiumSet } = await fetchAuthorMap(userIds);
+
+        if (myToken !== fetchTokenRef.current) return;
+
+        const processed: UserStory[] = rows.map(s => ({
+          ...s,
+          author: profileMap.get(s.user_id),
+          is_premium: premiumSet.has(s.user_id),
         }));
 
-        if (reset) {
-          setStories(processedStories);
-          setPage(1);
-        } else {
-          setStories(prev => [...prev, ...processedStories]);
-          setPage(currentPage + 1);
+        setStories(prev => {
+          if (reset) return processed;
+          const seen = new Set(prev.map(p => p.id));
+          const merged = [...prev];
+          for (const s of processed) {
+            if (!seen.has(s.id)) merged.push(s);
+          }
+          return merged;
+        });
+
+        offsetRef.current = from + rows.length;
+        setHasMore(rows.length === STORIES_PER_PAGE);
+      } finally {
+        if (myToken === fetchTokenRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
         }
-
-        setHasMore(storiesData.length === STORIES_PER_PAGE);
       }
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [page, sortBy, searchQuery, user]);
+    },
+    [sortBy, searchQuery, user]
+  );
 
-  // Reset and load when sort or search changes
+  // Reset при смене сортировки/поиска/юзера
   useEffect(() => {
-    setPage(0);
     loadStories(true);
-  }, [sortBy, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortBy, searchQuery, user?.id]);
 
-  // Subscribe to realtime updates
+  // Realtime
   useEffect(() => {
     const channel = supabase
       .channel('stories-realtime')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'user_stories'
-      }, async (payload) => {
-        const newStory = payload.new as any;
-        
-        if (newStory.is_hidden) return;
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'user_stories' },
+        async (payload) => {
+          const newStory = payload.new as any;
+          if (newStory.is_hidden) return;
+          if (sortBy === 'mine' && newStory.user_id !== user?.id) return;
 
-        // Fetch author profile if not anonymous
-        let author = undefined;
-        let is_premium = false;
-        
-        if (!newStory.is_anonymous) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url')
-            .eq('user_id', newStory.user_id)
-            .maybeSingle();
-          
-          const { data: premiumIds } = await supabase
-            .rpc('get_premium_user_ids', { user_ids: [newStory.user_id] });
-          
-          author = profile || undefined;
-          is_premium = premiumIds?.includes(newStory.user_id) || false;
+          const { profileMap, premiumSet } = await fetchAuthorMap([newStory.user_id]);
+          setStories(prev => {
+            if (prev.some(s => s.id === newStory.id)) return prev;
+            return [
+              {
+                ...newStory,
+                author: profileMap.get(newStory.user_id),
+                is_premium: premiumSet.has(newStory.user_id),
+              },
+              ...prev,
+            ];
+          });
         }
-
-        setStories(prev => [{
-          ...newStory,
-          author,
-          is_premium
-        }, ...prev]);
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'user_stories'
-      }, (payload) => {
-        const updated = payload.new as any;
-        setStories(prev => prev.map(s => 
-          s.id === updated.id 
-            ? { ...s, ...updated }
-            : s
-        ));
-      })
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'user_stories'
-      }, (payload) => {
-        const deleted = payload.old as any;
-        setStories(prev => prev.filter(s => s.id !== deleted.id));
-      })
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'user_stories' },
+        (payload) => {
+          const updated = payload.new as any;
+          setStories(prev => prev.map(s => (s.id === updated.id ? { ...s, ...updated } : s)));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'user_stories' },
+        (payload) => {
+          const deleted = payload.old as any;
+          setStories(prev => prev.filter(s => s.id !== deleted.id));
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [sortBy, user?.id]);
 
   const loadMore = useCallback(() => {
-    if (!isLoadingMore && hasMore) {
+    if (!isLoadingMore && !isLoading && hasMore) {
       loadStories(false);
     }
-  }, [isLoadingMore, hasMore, loadStories]);
+  }, [isLoadingMore, isLoading, hasMore, loadStories]);
 
-  const createStory = async (content: string, title?: string, isAnonymous = false) => {
+  const createStory = async (content: string, title?: string) => {
     if (!user) return { error: 'Not authenticated' };
-    
-    if (content.trim().length < 100) {
-      return { error: 'Story must be at least 100 characters' };
+
+    const trimmed = content.trim();
+    if (trimmed.length < STORY_MIN_LENGTH) {
+      return { error: `min_length:${STORY_MIN_LENGTH}` };
+    }
+    if (trimmed.length > STORY_MAX_LENGTH) {
+      return { error: 'too_long' };
     }
 
-    // Rate limit: check if user created a story today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Серверный RPC: атомарная валидация + rate-limit.
+    const rpc = await (supabase.rpc as any)('create_user_story', {
+      p_content: trimmed,
+      p_title: title?.trim() || null,
+    });
 
-    const { data: todayStories } = await supabase
+    if (!rpc.error) {
+      return { data: { id: rpc.data } };
+    }
+
+    const msg = rpc.error.message || '';
+    // Если RPC ещё не задеплоен — fallback на прямой insert + клиентский лимит.
+    const isMissing = /PGRST202|not exist|not found|create_user_story/i.test(msg);
+    if (!isMissing) {
+      if (/Rate limit/i.test(msg)) return { error: 'rate_limit' };
+      if (/too short/i.test(msg)) return { error: `min_length:${STORY_MIN_LENGTH}` };
+      if (/too long/i.test(msg)) return { error: 'too_long' };
+      return { error: msg };
+    }
+
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: recent } = await supabase
       .from('user_stories')
       .select('id')
       .eq('user_id', user.id)
-      .gte('created_at', today.toISOString())
+      .gte('created_at', dayAgo)
       .limit(1);
 
-    if (todayStories && todayStories.length > 0) {
-      return { error: 'You can only create one story per day' };
+    if (recent && recent.length > 0) {
+      return { error: 'rate_limit' };
     }
 
     const { data, error } = await supabase
@@ -226,44 +259,31 @@ export function useStories({ sortBy, searchQuery }: UseStoriesOptions) {
       .insert({
         user_id: user.id,
         title: title?.trim() || null,
-        content: content.trim(),
-        is_anonymous: isAnonymous
+        content: trimmed,
       })
       .select()
       .single();
 
-    if (error) {
-      console.error('Error creating story:', error);
-      return { error: error.message };
-    }
-
+    if (error) return { error: error.message };
     return { data };
   };
 
   const hideStory = async (storyId: string) => {
     if (!user) return;
-
     await supabase
       .from('user_stories')
       .update({ is_hidden: true })
       .eq('id', storyId)
       .eq('user_id', user.id);
-
     setStories(prev => prev.filter(s => s.id !== storyId));
   };
 
   const deleteStory = async (storyId: string) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('user_stories')
-      .delete()
-      .eq('id', storyId);
-
+    if (!user) return { error: 'Not authenticated' };
+    const { error } = await supabase.from('user_stories').delete().eq('id', storyId);
     if (!error) {
       setStories(prev => prev.filter(s => s.id !== storyId));
     }
-
     return { error };
   };
 
@@ -276,6 +296,6 @@ export function useStories({ sortBy, searchQuery }: UseStoriesOptions) {
     createStory,
     hideStory,
     deleteStory,
-    refresh: () => loadStories(true)
+    refresh: () => loadStories(true),
   };
 }

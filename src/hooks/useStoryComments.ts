@@ -7,10 +7,11 @@ export interface StoryComment {
   story_id: string;
   user_id: string;
   content: string;
-  is_anonymous: boolean;
   reply_to_id: string | null;
   created_at: string;
+  edited_at?: string | null;
   author?: {
+    user_id: string;
     display_name: string | null;
     avatar_url: string | null;
   };
@@ -44,11 +45,9 @@ export function useStoryComments(storyId: string | null) {
       }
 
       if (commentsData) {
-        // Fetch author profiles (for non-anonymous)
-        const nonAnonymousComments = commentsData.filter(c => !c.is_anonymous);
-        const userIds = [...new Set(nonAnonymousComments.map(c => c.user_id))];
+        const userIds = [...new Set(commentsData.map(c => c.user_id))];
 
-        let profileMap = new Map<string, { display_name: string | null; avatar_url: string | null }>();
+        let profileMap = new Map<string, StoryComment['author']>();
         let premiumUserIds = new Set<string>();
 
         if (userIds.length > 0) {
@@ -60,13 +59,13 @@ export function useStoryComments(storyId: string | null) {
           const { data: premiumIds } = await supabase
             .rpc('get_premium_user_ids', { user_ids: userIds });
 
-          profileMap = new Map(profiles?.map(p => [p.user_id, { display_name: p.display_name, avatar_url: p.avatar_url }]) || []);
+          profileMap = new Map(profiles?.map(p => [p.user_id, p as StoryComment['author']]) || []);
           premiumUserIds = new Set(premiumIds || []);
         }
 
         const processedComments: StoryComment[] = commentsData.map(comment => ({
           ...comment,
-          author: comment.is_anonymous ? undefined : profileMap.get(comment.user_id),
+          author: profileMap.get(comment.user_id),
           is_premium: premiumUserIds.has(comment.user_id)
         }));
 
@@ -81,7 +80,6 @@ export function useStoryComments(storyId: string | null) {
     loadComments();
   }, [loadComments]);
 
-  // Subscribe to realtime updates
   useEffect(() => {
     if (!storyId) return;
 
@@ -94,30 +92,33 @@ export function useStoryComments(storyId: string | null) {
         filter: `story_id=eq.${storyId}`
       }, async (payload) => {
         const newComment = payload.new as any;
-        
-        // Fetch author profile if not anonymous
-        let author = undefined;
-        let is_premium = false;
-        
-        if (!newComment.is_anonymous) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url')
-            .eq('user_id', newComment.user_id)
-            .maybeSingle();
-          
-          const { data: premiumIds } = await supabase
-            .rpc('get_premium_user_ids', { user_ids: [newComment.user_id] });
-          
-          author = profile || undefined;
-          is_premium = premiumIds?.includes(newComment.user_id) || false;
-        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .eq('user_id', newComment.user_id)
+          .maybeSingle();
+
+        const { data: premiumIds } = await supabase
+          .rpc('get_premium_user_ids', { user_ids: [newComment.user_id] });
+
+        const author = (profile as StoryComment['author']) || undefined;
+        const is_premium = premiumIds?.includes(newComment.user_id) || false;
 
         setComments(prev => [...prev, {
           ...newComment,
           author,
-          is_premium
+          is_premium,
         }]);
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'story_comments',
+        filter: `story_id=eq.${storyId}`
+      }, (payload) => {
+        const u = payload.new as any;
+        setComments(prev => prev.map(c => c.id === u.id ? { ...c, content: u.content, edited_at: u.edited_at } : c));
       })
       .on('postgres_changes', {
         event: 'DELETE',
@@ -135,9 +136,9 @@ export function useStoryComments(storyId: string | null) {
     };
   }, [storyId]);
 
-  const sendComment = async (content: string, isAnonymous = false, replyToId?: string) => {
+  const sendComment = async (content: string, replyToId?: string) => {
     if (!user || !storyId) return { error: 'Not authenticated' };
-    
+
     if (!content.trim()) {
       return { error: 'Comment cannot be empty' };
     }
@@ -152,8 +153,7 @@ export function useStoryComments(storyId: string | null) {
         story_id: storyId,
         user_id: user.id,
         content: content.trim(),
-        is_anonymous: isAnonymous,
-        reply_to_id: replyToId || null
+        reply_to_id: replyToId || null,
       })
       .select()
       .single();
@@ -182,11 +182,30 @@ export function useStoryComments(storyId: string | null) {
     return { error: null };
   };
 
+  const editComment = async (commentId: string, newContent: string) => {
+    if (!user) return { error: 'Not authenticated' };
+    const trimmed = newContent.trim();
+    if (!trimmed) return { error: 'Comment cannot be empty' };
+    if (trimmed.length > 1000) return { error: 'Comment too long (max 1000 characters)' };
+
+    const { error } = await supabase
+      .from('story_comments')
+      .update({ content: trimmed })
+      .eq('id', commentId)
+      .eq('user_id', user.id);
+
+    if (error) return { error: error.message };
+
+    setComments(prev => prev.map(c => c.id === commentId ? { ...c, content: trimmed, edited_at: new Date().toISOString() } : c));
+    return { error: null };
+  };
+
   return {
     comments,
     isLoading,
     sendComment,
+    editComment,
     deleteComment,
-    refresh: loadComments
+    refresh: loadComments,
   };
 }

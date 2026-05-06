@@ -38,7 +38,7 @@ const StatCard = memo(({ icon, value, label, suffix = "", decimals = 0, delay }:
     if (decimals > 0) {
       return num.toFixed(decimals);
     }
-    return Math.floor(num).toLocaleString('ru-RU');
+    return Math.floor(num).toLocaleString('en-US');
   };
 
   return (

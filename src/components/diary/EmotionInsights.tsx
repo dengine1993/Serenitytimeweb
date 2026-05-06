@@ -5,51 +5,55 @@ import { TrendingUp, TrendingDown, AlertTriangle, Sparkles } from "lucide-react"
 interface EmotionInsightsProps {
   insights: {
     mostCommonEmotion?: string;
-    averageAnxiety: number;
-    anxietyTrend?: 'up' | 'down' | 'stable';
+    averageMoodScore: number;
+    moodTrend?: 'up' | 'down' | 'stable';
     topTriggers: Array<{ trigger: string; count: number }>;
     recommendation?: string;
   };
 }
 
 const EMOTION_LABELS: Record<string, string> = {
-  anxious: "Тревога",
+  joy: "Радость",
   calm: "Спокойствие",
-  sad: "Грусть",
-  happy: "Радость",
-  angry: "Злость",
-  fearful: "Страх"
+  neutral: "Ровное состояние",
+  sadness: "Грусть",
+  anger: "Злость",
+  fatigue: "Усталость",
+  fear: "Страх",
+  hope: "Надежда",
+  gratitude: "Благодарность",
+  pride: "Гордость",
 };
 
 export const EmotionInsights = ({ insights }: EmotionInsightsProps) => {
   const getTrendIcon = () => {
-    switch (insights.anxietyTrend) {
+    switch (insights.moodTrend) {
       case 'up':
-        return <TrendingUp className="w-5 h-5 text-red-300" />;
+        return <TrendingUp className="w-5 h-5 text-green-300" />;
       case 'down':
-        return <TrendingDown className="w-5 h-5 text-green-300" />;
+        return <TrendingDown className="w-5 h-5 text-amber-300" />;
       default:
         return <Sparkles className="w-5 h-5 text-blue-300" />;
     }
   };
 
   const getTrendText = () => {
-    switch (insights.anxietyTrend) {
+    switch (insights.moodTrend) {
       case 'up':
-        return "Уровень тревоги растёт";
+        return "Настроение растёт";
       case 'down':
-        return "Уровень тревоги снижается";
+        return "Настроение снижается";
       default:
-        return "Уровень тревоги стабилен";
+        return "Настроение стабильно";
     }
   };
 
   const getTrendColor = () => {
-    switch (insights.anxietyTrend) {
+    switch (insights.moodTrend) {
       case 'up':
-        return "border-red-400/30 bg-red-400/10";
-      case 'down':
         return "border-green-400/30 bg-green-400/10";
+      case 'down':
+        return "border-amber-400/30 bg-amber-400/10";
       default:
         return "border-blue-400/30 bg-blue-400/10";
     }
@@ -63,18 +67,16 @@ export const EmotionInsights = ({ insights }: EmotionInsightsProps) => {
       </div>
 
       <div className="space-y-4">
-        {/* Anxiety Trend */}
         <div className={`p-4 rounded-lg border ${getTrendColor()}`}>
           <div className="flex items-center gap-2 mb-2">
             {getTrendIcon()}
             <span className="text-white font-medium">{getTrendText()}</span>
           </div>
           <p className="text-sm text-blue-100/70">
-            Средний уровень: {insights.averageAnxiety.toFixed(1)}/10
+            Средний балл: {insights.averageMoodScore.toFixed(1)}/10
           </p>
         </div>
 
-        {/* Most Common Emotion */}
         {insights.mostCommonEmotion && (
           <div className="p-4 rounded-lg border border-white/10 bg-white/5">
             <p className="text-sm text-blue-100/70 mb-1">Чаще всего чувствуешь</p>
@@ -84,12 +86,11 @@ export const EmotionInsights = ({ insights }: EmotionInsightsProps) => {
           </div>
         )}
 
-        {/* Top Triggers */}
         {insights.topTriggers.length > 0 && (
           <div className="p-4 rounded-lg border border-orange-400/30 bg-orange-400/10">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="w-5 h-5 text-orange-300" />
-              <span className="text-white font-medium">Главные триггеры</span>
+              <span className="text-white font-medium">Что чаще всего влияет</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {insights.topTriggers.slice(0, 3).map((trigger) => (
@@ -104,7 +105,6 @@ export const EmotionInsights = ({ insights }: EmotionInsightsProps) => {
           </div>
         )}
 
-        {/* Recommendation */}
         {insights.recommendation && (
           <div className="p-4 rounded-lg border border-green-400/30 bg-green-400/10">
             <p className="text-sm text-green-100">

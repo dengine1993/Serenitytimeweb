@@ -35,7 +35,7 @@ export const LandingLoader = () => {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-[100] bg-[#0A0F18] flex items-center justify-center"
+          className="fixed inset-0 z-[100] bg-[#1a0a2e] flex items-center justify-center"
         >
           <div className="flex flex-col items-center gap-6">
             {/* Logo with Breathing Animation */}
@@ -64,7 +64,7 @@ export const LandingLoader = () => {
               />
               <img
                 src={logoImage}
-                alt="Безмятежные"
+                alt="Восход"
                 className="relative w-full h-full object-contain"
                 style={{ filter: "drop-shadow(0 0 20px rgba(120, 146, 255, 0.5))" }}
               />

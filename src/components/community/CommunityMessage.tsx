@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
-import { ru } from 'date-fns/locale';
-import { Heart, FileText, Download, Pencil, Trash2, Check, X, Reply, Pin, Flag, CheckCheck, MessageCircle, User } from 'lucide-react';
+import { ru, enUS } from 'date-fns/locale';
+import { useI18n } from '@/hooks/useI18n';
+import { Heart, FileText, Download, Pencil, Trash2, Check, X, Reply, Pin, CheckCheck, MessageCircle, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +26,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useCommunityReactions } from '@/hooks/useCommunityReactions';
-import { ReportModal } from './ReportModal';
+
 import { parseMentions } from '@/hooks/useMentions';
 import { CEO_USER_ID } from '@/lib/constants';
 import { CEOAvatar } from '@/components/common/CEOAvatar';
@@ -171,6 +172,8 @@ export function CommunityMessage({
   onUserClick,
   onStartChat
 }: CommunityMessageProps) {
+  const { t, language } = useI18n();
+  const dateLocale = language === 'ru' ? ru : enUS;
   const [isEditing, setIsEditing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -215,10 +218,10 @@ export function CommunityMessage({
   const emojiIndex = message.id.charCodeAt(0) % EMOJI_AVATARS.length;
   const emojiAvatar = EMOJI_AVATARS[emojiIndex];
   
-  const displayName = message.author?.display_name || 'Аноним';
+  const displayName = message.author?.display_name || t('community.message.anonymous');
   const timeAgo = formatDistanceToNow(new Date(message.created_at), { 
     addSuffix: false, 
-    locale: ru 
+    locale: dateLocale 
   });
 
   const handleSaveEdit = async () => {
@@ -257,7 +260,7 @@ export function CommunityMessage({
       return (
         <img 
           src={message.media_url} 
-          alt="Вложение" 
+          alt={t('community.message.attachment')} 
           className="rounded-xl max-w-full max-h-64 object-cover mt-2 cursor-pointer"
           onClick={() => window.open(message.media_url!, '_blank')}
         />
@@ -275,7 +278,7 @@ export function CommunityMessage({
     }
 
     // File type
-    const fileName = message.media_url.split('/').pop() || 'Файл';
+    const fileName = message.media_url.split('/').pop() || t('community.message.file');
     return (
       <a 
         href={message.media_url} 
@@ -339,7 +342,7 @@ export function CommunityMessage({
                   className="relative flex justify-center group/avatar cursor-pointer"
                 >
                   {message.user_id === CEO_USER_ID ? (
-                    <CEOAvatar size="md" />
+                    <CEOAvatar size="md" avatarUrl={message.author?.avatar_url} />
                   ) : (
                     <>
                       {/* Ring wrapper for premium - prevents clipping */}
@@ -410,7 +413,7 @@ export function CommunityMessage({
                       className="text-xs font-semibold truncate"
                       style={{ color: 'hsl(var(--reply-author-color))' }}
                     >
-                      {replyToMessage.author?.display_name || 'Аноним'}
+                      {replyToMessage.author?.display_name || t('community.message.anonymous')}
                     </p>
                     <p 
                       className="text-sm truncate"
@@ -457,7 +460,7 @@ export function CommunityMessage({
                       className="h-7 px-2"
                     >
                       <X className="h-3.5 w-3.5 mr-1" />
-                      Отмена
+                      {t('community.message.cancel')}
                     </Button>
                     <Button
                       size="sm"
@@ -466,7 +469,7 @@ export function CommunityMessage({
                       className="h-7 px-2"
                     >
                       <Check className="h-3.5 w-3.5 mr-1" />
-                      Сохранить
+                      {t('community.message.save')}
                     </Button>
                   </div>
                 </div>
@@ -536,7 +539,7 @@ export function CommunityMessage({
       <Drawer open={showActionSheet} onOpenChange={setShowActionSheet}>
         <DrawerContent className="px-4 pb-8 pt-2">
           <DrawerHeader className="pb-2">
-            <DrawerTitle className="text-base font-medium text-center">Действия</DrawerTitle>
+            <DrawerTitle className="text-base font-medium text-center">{t('community.message.actions')}</DrawerTitle>
           </DrawerHeader>
           <div className="flex flex-col gap-2">
             {/* Reply */}
@@ -550,7 +553,7 @@ export function CommunityMessage({
                 }}
               >
                 <Reply className="h-5 w-5 mr-3" />
-                Ответить
+                {t('community.message.reply')}
               </Button>
             )}
 
@@ -566,7 +569,7 @@ export function CommunityMessage({
                   }}
                 >
                   <Pencil className="h-5 w-5 mr-3" />
-                  Редактировать
+                  {t('community.message.edit')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -577,7 +580,7 @@ export function CommunityMessage({
                   }}
                 >
                   <Trash2 className="h-5 w-5 mr-3" />
-                  Удалить
+                  {t('community.message.delete')}
                 </Button>
               </>
             )}
@@ -595,7 +598,7 @@ export function CommunityMessage({
                   }}
                 >
                   <User className="h-5 w-5 mr-3" />
-                  Профиль
+                  {t('community.message.profile')}
                 </Button>
 
                 {/* Start Private Chat */}
@@ -609,22 +612,10 @@ export function CommunityMessage({
                     }}
                   >
                     <MessageCircle className="h-5 w-5 mr-3" />
-                    Написать в личку
+                    {t('community.message.writeDm')}
                   </Button>
                 )}
 
-                {/* Report */}
-                <Button
-                  variant="ghost"
-                  className="justify-start h-12 text-base text-amber-600"
-                  onClick={() => {
-                    setShowActionSheet(false);
-                    setShowReportModal(true);
-                  }}
-                >
-                  <Flag className="h-5 w-5 mr-3" />
-                  Пожаловаться
-                </Button>
               </>
             )}
 
@@ -642,7 +633,7 @@ export function CommunityMessage({
                     }}
                   >
                     <Pin className="h-5 w-5 mr-3" fill="currentColor" />
-                    Открепить
+                    {t('community.message.unpin')}
                   </Button>
                 ) : (
                   <Button
@@ -654,7 +645,7 @@ export function CommunityMessage({
                     }}
                   >
                     <Pin className="h-5 w-5 mr-3" />
-                    Закрепить
+                    {t('community.message.pin')}
                   </Button>
                 )}
                 <Button
@@ -666,7 +657,7 @@ export function CommunityMessage({
                   }}
                 >
                   <Trash2 className="h-5 w-5 mr-3" />
-                  Удалить (модерация)
+                  {t('community.message.deleteModeration')}
                 </Button>
               </>
             )}
@@ -678,44 +669,40 @@ export function CommunityMessage({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить сообщение?</AlertDialogTitle>
+            <AlertDialogTitle>{t('community.message.deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Это действие нельзя отменить. Сообщение будет удалено навсегда.
+              {t('community.message.deleteDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Отмена</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('community.message.cancel')}</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? 'Удаление...' : 'Удалить'}
+              {isDeleting ? t('community.message.deleting') : t('community.message.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Report modal */}
-      <ReportModal
-        messageId={message.id}
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-      />
     </>
   );
 }
 
 // Date separator component
 export function DateSeparator({ date }: { date: Date }) {
+  const { t, language } = useI18n();
+  const dateLocale = language === 'ru' ? ru : enUS;
   let label: string;
   
   if (isToday(date)) {
-    label = 'Сегодня';
+    label = t('community.message.today');
   } else if (isYesterday(date)) {
-    label = 'Вчера';
+    label = t('community.message.yesterday');
   } else {
-    label = format(date, 'd MMMM', { locale: ru });
+    label = format(date, 'd MMMM', { locale: dateLocale });
   }
 
   return (

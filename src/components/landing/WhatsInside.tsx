@@ -1,15 +1,13 @@
 import { motion } from "framer-motion";
-import { BookHeart, MessageCircle, Phone, Wind, NotebookPen, Brain, Palette, Newspaper, Users, Hand, Compass, Crown, ArrowRight } from "lucide-react";
+import { BookHeart, MessageCircle, Heart, Ear, NotebookPen, Brain, Palette, Newspaper, Users, EyeOff, MessagesSquare } from "lucide-react";
 import { useI18n } from "@/hooks/useI18n";
-import jivaAvatar from "@/assets/jiva.png";
 
 type Tier = {
   key: string;
-  accent: "rose" | "emerald" | "violet";
+  accent: "rose" | "amber" | "orange";
   titleKey: string;
   subtitleKey: string;
-  items: { icon: typeof Wind; key: string }[];
-  footnoteKey?: string;
+  items: { icon: typeof Heart; key: string }[];
 };
 
 const TIERS: Tier[] = [
@@ -19,32 +17,31 @@ const TIERS: Tier[] = [
     titleKey: "index.whatsInside.now.title",
     subtitleKey: "index.whatsInside.now.subtitle",
     items: [
-      { icon: Wind, key: "index.whatsInside.now.items.0" },
-      { icon: Hand, key: "index.whatsInside.now.items.1" },
+      { icon: Ear, key: "index.whatsInside.now.items.0" },
+      { icon: EyeOff, key: "index.whatsInside.now.items.1" },
+      { icon: MessagesSquare, key: "index.whatsInside.now.items.2" },
     ],
-    footnoteKey: "index.whatsInside.now.footnote",
   },
   {
     key: "explore",
-    accent: "emerald",
+    accent: "amber",
     titleKey: "index.whatsInside.explore.title",
     subtitleKey: "index.whatsInside.explore.subtitle",
     items: [
       { icon: NotebookPen, key: "index.whatsInside.explore.items.0" },
-      { icon: Brain, key: "index.whatsInside.explore.items.1" },
-      { icon: Compass, key: "index.whatsInside.explore.items.2" },
-      { icon: Palette, key: "index.whatsInside.explore.items.3" },
+      { icon: Palette, key: "index.whatsInside.explore.items.1" },
+      { icon: Brain, key: "index.whatsInside.explore.items.2" },
     ],
   },
   {
     key: "talk",
-    accent: "violet",
+    accent: "orange",
     titleKey: "index.whatsInside.talk.title",
     subtitleKey: "index.whatsInside.talk.subtitle",
     items: [
       { icon: Newspaper, key: "index.whatsInside.talk.items.0" },
-      { icon: MessageCircle, key: "index.whatsInside.talk.items.1" },
-      { icon: Users, key: "index.whatsInside.talk.items.2" },
+      { icon: Users, key: "index.whatsInside.talk.items.1" },
+      { icon: MessageCircle, key: "index.whatsInside.talk.items.2" },
     ],
   },
 ];
@@ -57,12 +54,19 @@ const ACCENTS: Record<string, { border: string; bg: string; icon: string; text: 
     text: "text-rose-300/90",
     glow: "from-rose-500/20 to-transparent",
   },
-  emerald: {
-    border: "border-emerald-500/25",
-    bg: "bg-emerald-500/10",
-    icon: "text-emerald-300",
-    text: "text-emerald-300/90",
-    glow: "from-emerald-500/20 to-transparent",
+  amber: {
+    border: "border-amber-500/25",
+    bg: "bg-amber-500/10",
+    icon: "text-amber-300",
+    text: "text-amber-300/90",
+    glow: "from-amber-500/20 to-transparent",
+  },
+  orange: {
+    border: "border-orange-500/25",
+    bg: "bg-orange-500/10",
+    icon: "text-orange-300",
+    text: "text-orange-300/90",
+    glow: "from-orange-500/20 to-transparent",
   },
   violet: {
     border: "border-violet-500/25",
@@ -86,14 +90,16 @@ export const WhatsInside = () => {
         className="text-center mb-10 max-w-3xl mx-auto"
       >
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
-          {t("index.whatsInside.title", "Три уровня помощи — выбирай по состоянию")}
+          {t("index.whatsInside.title")}
         </h2>
+        <p className="text-base text-white/65 max-w-xl mx-auto">
+          {t("index.whatsInside.subtitle")}
+        </p>
       </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-5 lg:gap-6 max-w-6xl mx-auto">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6 max-w-6xl mx-auto">
         {TIERS.map((tier, idx) => {
           const Accent = ACCENTS[tier.accent];
-          const isSos = tier.key === "now";
           return (
             <motion.div
               key={tier.key}
@@ -105,19 +111,15 @@ export const WhatsInside = () => {
             >
               <div className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${Accent.glow}`} />
               <div className="relative">
-                {isSos ? (
-                  <span className="inline-flex items-center justify-center px-3 h-12 min-w-[64px] rounded-xl text-base font-extrabold tracking-widest text-white bg-red-600 shadow-[0_0_16px_rgba(239,68,68,0.55)] mb-4">
-                    SOS
-                  </span>
-                ) : (
-                  <div className={`w-12 h-12 rounded-2xl ${Accent.bg} border ${Accent.border} flex items-center justify-center mb-4`}>
-                    {tier.key === "explore" ? (
-                      <BookHeart className={`w-6 h-6 ${Accent.icon}`} />
-                    ) : (
-                      <MessageCircle className={`w-6 h-6 ${Accent.icon}`} />
-                    )}
-                  </div>
-                )}
+                <div className={`w-12 h-12 rounded-2xl ${Accent.bg} border ${Accent.border} flex items-center justify-center mb-4`}>
+                  {tier.key === "explore" ? (
+                    <BookHeart className={`w-6 h-6 ${Accent.icon}`} />
+                  ) : tier.key === "now" ? (
+                    <Heart className={`w-6 h-6 ${Accent.icon}`} />
+                  ) : (
+                    <MessageCircle className={`w-6 h-6 ${Accent.icon}`} />
+                  )}
+                </div>
                 <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
                   {t(tier.titleKey)}
                 </h3>
@@ -138,58 +140,11 @@ export const WhatsInside = () => {
                     );
                   })}
                 </ul>
-
-                {tier.key === "talk" && (
-                  <div className="mt-5 rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-transparent p-4">
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={jivaAvatar}
-                        alt="Jiva"
-                        className="w-12 h-12 rounded-full object-cover border border-violet-400/40 shadow-[0_0_20px_rgba(167,139,250,0.45)] flex-shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                          <span className="text-sm font-semibold text-white">
-                            {t("index.whatsInside.talk.jiva.title")}
-                          </span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-violet-200 bg-violet-500/20 border border-violet-400/30">
-                            <Crown className="w-2.5 h-2.5" />
-                            {t("index.whatsInside.talk.jiva.badge")}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-violet-300/80 font-mono">
-                          {t("index.whatsInside.talk.jiva.model")}
-                        </p>
-                      </div>
-                    </div>
-                    <ul className="mt-3 space-y-1.5">
-                      <li className="text-xs text-white/80 leading-snug">• {t("index.whatsInside.talk.jiva.limit")}</li>
-                      <li className="text-xs text-white/80 leading-snug">• {t("index.whatsInside.talk.jiva.tone")}</li>
-                    </ul>
-                    <p className="mt-3 pt-3 border-t border-violet-400/15 text-[11px] leading-relaxed text-white/55">
-                      {t("index.whatsInside.talk.jiva.why")}
-                    </p>
-                    <a
-                      href="#anchor-plan"
-                      className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-300 hover:text-violet-200 transition-colors"
-                    >
-                      {t("index.whatsInside.talk.jiva.cta")}
-                      <ArrowRight className="w-3 h-3" />
-                    </a>
-                  </div>
-                )}
-
-                {tier.footnoteKey && (
-                  <p className="mt-4 pt-4 border-t border-white/5 text-xs italic text-white/50">
-                    {t(tier.footnoteKey)}
-                  </p>
-                )}
               </div>
             </motion.div>
           );
         })}
       </div>
-
     </section>
   );
 };

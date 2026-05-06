@@ -6,7 +6,7 @@
 
 ## 1. Confirm Signup (Подтверждение регистрации)
 
-**Subject:** Подтвердите ваш email — Безмятежные
+**Subject:** Подтвердите ваш email — Восход
 
 ```html
 <!DOCTYPE html>
@@ -21,11 +21,11 @@
     <tr>
       <td style="padding: 40px 32px 32px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
         <img src="https://hvtpfbfawhmkvjtcyaxs.supabase.co/storage/v1/object/public/email-assets/logo-bezm.png" 
-             alt="Безмятежные" 
+             alt="Восход" 
              width="72" 
              height="72" 
              style="border-radius: 14px; border: 2px solid rgba(255,255,255,0.1);">
-        <h1 style="color: #ffffff; margin: 20px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Безмятежные</h1>
+        <h1 style="color: #ffffff; margin: 20px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Восход</h1>
         <p style="color: rgba(255,255,255,0.7); margin: 8px 0 0; font-size: 14px;">Ваш путь к внутреннему спокойствию</p>
       </td>
     </tr>
@@ -34,7 +34,7 @@
       <td style="padding: 40px 32px;">
         <h2 style="color: #1a1a2e; margin: 0 0 16px; font-size: 22px; font-weight: 600;">Добро пожаловать! 🌿</h2>
         <p style="color: #4a5568; font-size: 16px; line-height: 1.7; margin: 0 0 28px;">
-          Спасибо за регистрацию в приложении <strong>Безмятежные</strong>. Чтобы завершить создание аккаунта и получить доступ ко всем возможностям, подтвердите ваш email-адрес.
+          Спасибо за регистрацию в приложении <strong>Восход</strong>. Чтобы завершить создание аккаунта и получить доступ ко всем возможностям, подтвердите ваш email-адрес.
         </p>
         <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
           <tr>
@@ -66,7 +66,7 @@
         </p>
         <p style="color: #718096; font-size: 14px; margin: 20px 0 0;">
           С заботой о вас,<br>
-          <strong style="color: #4a5568;">Команда Безмятежные</strong>
+          <strong style="color: #4a5568;">Команда Восход</strong>
         </p>
       </td>
     </tr>
@@ -76,7 +76,7 @@
     <tr>
       <td style="text-align: center;">
         <p style="color: #a0aec0; font-size: 12px; margin: 0;">
-          © 2024 Безмятежные. Все права защищены.
+          © 2024 Восход. Все права защищены.
         </p>
       </td>
     </tr>
@@ -89,7 +89,7 @@
 
 ## 2. Reset Password (Сброс пароля)
 
-**Subject:** Сброс пароля — Безмятежные
+**Subject:** Сброс пароля — Восход
 
 ```html
 <!DOCTYPE html>
@@ -104,11 +104,11 @@
     <tr>
       <td style="padding: 40px 32px 32px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
         <img src="https://hvtpfbfawhmkvjtcyaxs.supabase.co/storage/v1/object/public/email-assets/logo-bezm.png" 
-             alt="Безмятежные" 
+             alt="Восход" 
              width="72" 
              height="72" 
              style="border-radius: 14px; border: 2px solid rgba(255,255,255,0.1);">
-        <h1 style="color: #ffffff; margin: 20px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Безмятежные</h1>
+        <h1 style="color: #ffffff; margin: 20px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Восход</h1>
         <p style="color: rgba(255,255,255,0.7); margin: 8px 0 0; font-size: 14px;">Ваш путь к внутреннему спокойствию</p>
       </td>
     </tr>
@@ -152,7 +152,7 @@
       <td style="padding: 28px 32px; text-align: center;">
         <p style="color: #718096; font-size: 14px; margin: 0;">
           С заботой о вас,<br>
-          <strong style="color: #4a5568;">Команда Безмятежные</strong>
+          <strong style="color: #4a5568;">Команда Восход</strong>
         </p>
       </td>
     </tr>
@@ -162,7 +162,7 @@
     <tr>
       <td style="text-align: center;">
         <p style="color: #a0aec0; font-size: 12px; margin: 0;">
-          © 2024 Безмятежные. Все права защищены.
+          © 2024 Восход. Все права защищены.
         </p>
       </td>
     </tr>
@@ -208,7 +208,7 @@
 ┌──────────────────────────────────────────┐
 │  ┌────────────────────────────────────┐  │
 │  │     [ЛОГОТИП]                      │  │
-│  │     Безмятежные                    │  │
+│  │     Восход                    │  │
 │  │     Ваш путь к спокойствию         │  │
 │  └────────────────────────────────────┘  │
 │                                          │
@@ -221,7 +221,7 @@
 │      └────────────────────┘              │
 │                                          │
 │  ─────────────────────────────────────   │
-│  С заботой, Команда Безмятежные          │
+│  С заботой, Команда Восход          │
 └──────────────────────────────────────────┘
 ```
 
@@ -230,7 +230,7 @@
 ┌──────────────────────────────────────────┐
 │  ┌────────────────────────────────────┐  │
 │  │     [ЛОГОТИП]                      │  │
-│  │     Безмятежные                    │  │
+│  │     Восход                    │  │
 │  └────────────────────────────────────┘  │
 │                                          │
 │  Сброс пароля 🔐                         │
@@ -244,6 +244,6 @@
 │  ⚠️ Ссылка действительна 1 час           │
 │                                          │
 │  ─────────────────────────────────────   │
-│  С заботой, Команда Безмятежные          │
+│  С заботой, Команда Восход          │
 └──────────────────────────────────────────┘
 ```

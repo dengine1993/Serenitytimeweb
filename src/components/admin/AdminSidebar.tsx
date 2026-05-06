@@ -11,7 +11,9 @@ import {
   Database,
   ScrollText,
   DollarSign,
-  Sparkles
+  Sparkles,
+  ShieldAlert,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -28,6 +30,8 @@ const navItems = [
   { to: "/admin/pricing", icon: DollarSign, label: "Цены" },
   { to: "/admin/ai", icon: Brain, label: "AI & Usage" },
   { to: "/admin/ai-memory", icon: Sparkles, label: "Память ИИ" },
+  { to: "/admin/incidents", icon: ShieldAlert, label: "Инциденты ПДн" },
+  { to: "/admin/notifications", icon: Bell, label: "Push-рассылки" },
 ];
 
 export function AdminSidebar() {
@@ -39,7 +43,7 @@ export function AdminSidebar() {
       {/* Header */}
       <div className="p-6 border-b border-border/50">
         <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Безмятежные
+          Восход
         </h1>
         <p className="text-xs text-muted-foreground mt-1">
           Панель администратора

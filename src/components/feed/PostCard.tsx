@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/hooks/useI18n';
 import { toast } from 'sonner';
 import { useHomeTheme } from '@/hooks/useHomeTheme';
 import { ChatBubbleLeftIcon, FlagIcon } from '@heroicons/react/24/solid';
@@ -11,7 +12,7 @@ import { ChatBubbleLeftIcon as ChatBubbleLeftOutlineIcon, FlagIcon as FlagOutlin
 import { Sun } from 'lucide-react';
 import Twemoji from 'react-twemoji';
 import { PostComments } from './PostComments';
-import { PostReportModal } from './PostReportModal';
+
 import { CEOAvatar } from '@/components/common/CEOAvatar';
 import { CEOBadge } from '@/components/common/CEOBadge';
 import {
@@ -27,6 +28,7 @@ interface PostCardProps {
     content: string;
     created_at: string;
     author?: {
+      user_id?: string;
       display_name?: string;
       avatar_url?: string;
     };
@@ -44,22 +46,29 @@ interface PostCardProps {
 
 export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProps) {
   const { user } = useAuth();
+  const { t, language } = useI18n();
   const { theme } = useHomeTheme();
+  
   const [reacting, setReacting] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [timeString, setTimeString] = useState(formatTime(post.created_at));
+  const [timeString, setTimeString] = useState(() => formatTime(post.created_at, t, language));
   const [burstEffect, setBurstEffect] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
-  const [showReportModal, setShowReportModal] = useState(false);
+  
   const isOwnPost = user?.id === post.user_id;
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeString(formatTime(post.created_at));
+      setTimeString(formatTime(post.created_at, t, language));
     }, 60000);
     return () => clearInterval(interval);
-  }, [post.created_at]);
+  }, [post.created_at, t, language]);
+
+  // Re-render time when language changes
+  useEffect(() => {
+    setTimeString(formatTime(post.created_at, t, language));
+  }, [language, post.created_at, t]);
 
   // Fetch comments count and subscribe to realtime updates
   useEffect(() => {
@@ -106,7 +115,7 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
     };
   }, [post.id]);
 
-  function formatTime(dateString: string) {
+  function formatTime(dateString: string, t: (k: string, p?: Record<string, unknown>) => string, language: 'ru' | 'en') {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -114,11 +123,11 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'сейчас';
-    if (diffMins < 60) return `${diffMins}м`;
-    if (diffHours < 24) return `${diffHours}ч`;
-    if (diffDays < 7) return `${diffDays}д`;
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    if (diffMins < 1) return t('feed.post.now');
+    if (diffMins < 60) return t('feed.post.minutes', { n: diffMins });
+    if (diffHours < 24) return t('feed.post.hours', { n: diffHours });
+    if (diffDays < 7) return t('feed.post.days', { n: diffDays });
+    return date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' });
   }
 
   const handleReaction = async () => {
@@ -155,7 +164,7 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
       onReactionUpdate?.();
     } catch (error) {
       console.error('Error toggling reaction:', error);
-      toast.error('Не удалось изменить реакцию');
+      toast.error(t('feed.post.reactionFail'));
     } finally {
       setReacting(false);
     }
@@ -183,7 +192,7 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
       <div className="flex gap-3">
         {/* Avatar */}
         {isCEO ? (
-          <CEOAvatar size="lg" />
+          <CEOAvatar size="lg" avatarUrl={post.author?.avatar_url} />
         ) : (
           <Avatar className="h-10 w-10 flex-shrink-0">
             <AvatarImage src={post.author?.avatar_url} />
@@ -202,11 +211,13 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
         <div className="flex-1 min-w-0">
           {/* Header row with name, badge, and time */}
           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-            <span className={cn(
-              "text-[15px] font-semibold truncate",
-              theme === 'light' ? "text-gray-900" : "text-foreground"
-            )}>
-              {post.author?.display_name || 'Аноним'}
+            <span
+              className={cn(
+                "text-[15px] font-semibold truncate text-left",
+                theme === 'light' ? "text-gray-900" : "text-foreground"
+              )}
+            >
+              {post.author?.display_name || '—'}
             </span>
             
             {/* Inline CEO badge */}
@@ -235,7 +246,7 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
                 onClick={() => setExpanded(true)}
                 className="text-[13px] text-primary hover:underline mt-1"
               >
-                Ещё
+                {t('feed.post.expand')}
               </button>
             )}
           </div>
@@ -254,7 +265,7 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
                     ? "text-gray-400 hover:text-sky-500" 
                     : "text-muted-foreground/60 hover:text-sky-500"
               )}
-              aria-label={`Комментарии: ${commentsCount}`}
+              aria-label={t('feed.post.commentsAria', { count: commentsCount })}
             >
               {showComments ? (
                 <ChatBubbleLeftIcon className="h-[18px] w-[18px]" />
@@ -269,7 +280,7 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
               )}
             </motion.button>
 
-            {/* "Warmed" reaction — Sun icon (replaces heart) */}
+            {/* "Proud" reaction — Sun icon (Sunrise concept) */}
             <motion.button
               onClick={handleReaction}
               disabled={reacting}
@@ -282,8 +293,8 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
                     ? "text-gray-400 hover:text-amber-500"
                     : "text-muted-foreground/60 hover:text-amber-400"
               )}
-              aria-label={`Согрело: ${heartCount}`}
-              title="Согрело"
+              aria-label={t('feed.post.warmedAria', { count: heartCount })}
+              title={t('feed.post.warmed')}
             >
               <span className="relative">
                 <Sun
@@ -320,40 +331,12 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
                   {heartCount}
                 </motion.span>
               ) : (
-                <span className="text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">
-                  Согрело
+                <span className="text-[13px] font-medium hidden sm:inline">
+                  {t('feed.post.warmed')}
                 </span>
               )}
             </motion.button>
 
-            {/* More actions menu */}
-            {!isOwnPost && user && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    className={cn(
-                      "flex items-center px-2 py-1 rounded-full transition-colors",
-                      theme === 'light' 
-                        ? "text-gray-400 hover:text-gray-600" 
-                        : "text-muted-foreground/60 hover:text-muted-foreground"
-                    )}
-                    aria-label="Ещё"
-                  >
-                    <EllipsisHorizontalIcon className="h-[18px] w-[18px]" />
-                  </motion.button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[160px]">
-                  <DropdownMenuItem 
-                    onClick={() => setShowReportModal(true)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <FlagOutlineIcon className="h-4 w-4 mr-2" />
-                    Пожаловаться
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           </div>
 
           {/* Comments section */}
@@ -364,6 +347,18 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.2 }}
+                onAnimationComplete={(def) => {
+                  // After the open animation finishes, drop overflow-hidden
+                  // so Jiva's outer ring/glow isn't clipped on the left edge.
+                  const el = document.getElementById(`post-comments-wrap-${post.id}`);
+                  if (!el) return;
+                  if (typeof def === 'object' && def && (def as { opacity?: number }).opacity === 1) {
+                    el.style.overflow = 'visible';
+                  } else {
+                    el.style.overflow = 'hidden';
+                  }
+                }}
+                id={`post-comments-wrap-${post.id}`}
                 className="overflow-hidden"
               >
                 <PostComments 
@@ -378,12 +373,6 @@ export function PostCard({ post, onReactionUpdate, isCEO = false }: PostCardProp
         </div>
       </div>
 
-      {/* Report Modal */}
-      <PostReportModal
-        postId={post.id}
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-      />
     </div>
   );
 }

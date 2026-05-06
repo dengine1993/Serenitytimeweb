@@ -2,17 +2,25 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Crown, Calendar, RefreshCw, ArrowUpCircle, Loader2 } from 'lucide-react';
+import { Crown, Calendar, Loader2, XCircle, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { usePricing } from '@/hooks/usePricing';
+// usePricing больше не нужен здесь — годовая подписка удалена.
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 interface SubscriptionData {
   id: string;
@@ -21,36 +29,32 @@ interface SubscriptionData {
   current_period_end: string | null;
   auto_renew: boolean | null;
   billing_interval: string | null;
+  canceled_at: string | null;
+  yookassa_payment_method_id: string | null;
 }
 
 export function SubscriptionManager() {
   const { user, session } = useAuth();
-  const { premiumYearly, premiumMonthly, yearlySavings } = usePricing();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updatingAutoRenew, setUpdatingAutoRenew] = useState(false);
-  const [upgradingToYearly, setUpgradingToYearly] = useState(false);
+  const [canceling, setCanceling] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchSubscription();
-    }
+    if (user) fetchSubscription();
   }, [user]);
 
   const fetchSubscription = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('subscriptions')
-        .select('id, plan, status, current_period_end, auto_renew, billing_interval')
+        .select('id, plan, status, current_period_end, auto_renew, billing_interval, canceled_at, yookassa_payment_method_id')
         .eq('user_id', user.id)
         .eq('plan', 'premium')
         .eq('status', 'active')
         .maybeSingle();
-
       if (error) throw error;
-      setSubscription(data);
+      setSubscription(data as SubscriptionData | null);
     } catch (error) {
       console.error('Error fetching subscription:', error);
     } finally {
@@ -58,180 +62,154 @@ export function SubscriptionManager() {
     }
   };
 
-  const handleToggleAutoRenew = async () => {
+  const handleCancel = async () => {
     if (!subscription || !session) return;
-
-    // Only allow for monthly subscriptions
-    if (subscription.billing_interval === 'year') {
-      toast.error('Автопродление недоступно для годовой подписки');
-      return;
-    }
-
-    setUpdatingAutoRenew(true);
+    setCanceling(true);
     try {
-      const { error } = await supabase.functions.invoke('toggle-auto-renew', {
-        body: { enable: !subscription.auto_renew }
-      });
-
+      const { data, error } = await supabase.functions.invoke('cancel-subscription');
       if (error) throw error;
-
-      setSubscription(prev => prev ? { ...prev, auto_renew: !prev.auto_renew } : null);
-      toast.success(subscription.auto_renew 
-        ? 'Автопродление отключено' 
-        : 'Автопродление включено'
-      );
+      setSubscription(prev => prev ? { ...prev, canceled_at: new Date().toISOString(), auto_renew: false } : null);
+      toast.success(data?.message ?? 'Подписка отменена. Доступ сохранится до конца оплаченного периода.');
     } catch (error) {
-      console.error('Error toggling auto-renew:', error);
-      toast.error('Не удалось изменить настройку');
+      console.error('Error canceling subscription:', error);
+      toast.error('Не удалось отменить подписку');
     } finally {
-      setUpdatingAutoRenew(false);
+      setCanceling(false);
     }
   };
 
-  const handleUpgradeToYearly = async () => {
-    if (!subscription || !session) return;
-
-    setUpgradingToYearly(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('upgrade-subscription', {
-        body: { targetInterval: 'year' }
-      });
-
-      if (error) throw error;
-
-      if (data?.confirmationUrl) {
-        window.location.href = data.confirmationUrl;
-      }
-    } catch (error) {
-      console.error('Error upgrading subscription:', error);
-      toast.error('Не удалось создать платёж для апгрейда');
-    } finally {
-      setUpgradingToYearly(false);
-    }
-  };
+  // Апгрейд на годовую подписку удалён — оставлена только месячная.
 
   if (loading) {
     return (
       <Card className="animate-pulse">
-        <CardContent className="p-6">
-          <div className="h-20 bg-muted rounded" />
-        </CardContent>
+        <CardContent className="p-6"><div className="h-20 bg-muted rounded" /></CardContent>
       </Card>
     );
   }
 
-  if (!subscription) {
-    return null;
-  }
+  if (!subscription) return null;
 
-  const isMonthly = subscription.billing_interval === 'month' || !subscription.billing_interval;
-  const isYearly = subscription.billing_interval === 'year';
-  const endDate = subscription.current_period_end 
-    ? new Date(subscription.current_period_end) 
-    : null;
+  const isMonthly = subscription.billing_interval !== 'year';
+  const isCanceled = !!subscription.canceled_at;
+  const hasPaymentMethod = !!subscription.yookassa_payment_method_id;
+  const autoRenewBroken = !isCanceled && !!subscription.auto_renew && !hasPaymentMethod;
+  const endDate = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+  const formattedEnd = endDate ? format(endDate, 'd MMMM yyyy', { locale: ru }) : null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <Card className="border-orange-400/25 bg-gradient-to-br from-orange-500/8 via-amber-500/4 to-rose-500/4 shadow-[0_20px_60px_-20px_rgba(249,115,22,0.35)]">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Crown className="h-5 w-5 text-primary" />
+            <Crown className="h-5 w-5 text-amber-300" />
             Управление подпиской
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {/* Current plan info */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="font-medium">Тариф «Опора»</p>
-              <div className="flex items-center gap-2 mt-1">
+              <p className="font-medium">Тариф Premium</p>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <Badge variant="secondary" className="text-xs">
-                  {isYearly ? 'Годовая подписка' : 'Месячная подписка'}
+                  Месячная подписка
                 </Badge>
-                {subscription.status === 'active' && (
+                {isCanceled ? (
+                  <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
+                    Отменена
+                  </Badge>
+                ) : (
                   <Badge className="bg-emerald-500 text-xs">Активна</Badge>
                 )}
               </div>
             </div>
             {endDate && (
               <div className="text-right text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 justify-end">
                   <Calendar className="h-4 w-4" />
-                  Действует до
+                  {isCanceled ? 'Доступ до' : 'Действует до'}
                 </div>
-                <p className="font-medium text-foreground">
-                  {format(endDate, 'd MMMM yyyy', { locale: ru })}
-                </p>
+                <p className="font-medium text-foreground">{formattedEnd}</p>
               </div>
             )}
           </div>
 
-          {/* Auto-renew toggle (only for monthly) */}
-          {isMonthly && (
-            <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
-              <div className="flex items-center gap-3">
-                <RefreshCw className={cn(
-                  "h-5 w-5",
-                  subscription.auto_renew ? "text-primary" : "text-muted-foreground"
-                )} />
-                <div>
-                  <Label htmlFor="auto-renew" className="font-medium cursor-pointer">
-                    Автопродление
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {subscription.auto_renew 
-                      ? 'Подписка продлится автоматически' 
-                      : 'Подписка завершится в указанную дату'}
+          {/* Canceled banner */}
+          {isCanceled && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium text-amber-700 dark:text-amber-300">
+                    Подписка отменена
+                  </p>
+                  <p className="text-amber-700/80 dark:text-amber-300/80">
+                    Вы пользуетесь Premium до {formattedEnd}. После этой даты доступ к Премиум-функциям закончится — продлите вручную, чтобы продолжить.
                   </p>
                 </div>
               </div>
-              <Switch
-                id="auto-renew"
-                checked={subscription.auto_renew ?? true}
-                onCheckedChange={handleToggleAutoRenew}
-                disabled={updatingAutoRenew}
-              />
             </div>
           )}
 
-          {/* Upgrade to yearly (only for monthly) */}
-          {isMonthly && (
-            <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <ArrowUpCircle className="h-5 w-5 text-amber-500" />
-                    <span className="font-medium">Перейти на год</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Экономия {yearlySavings} ₽ в год. Оставшееся время месячной подписки добавится к годовой.
+          {/* Auto-renewal status */}
+          {autoRenewBroken && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 text-sm">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium text-amber-700 dark:text-amber-300">
+                    Автопродление недоступно
+                  </p>
+                  <p className="text-amber-700/80 dark:text-amber-300/80">
+                    Способ оплаты не сохранён — продлить подписку автоматически не получится.
+                    За 3 дня до {formattedEnd} мы пришлём напоминание; продлите подписку вручную,
+                    и тогда автопродление снова заработает.
                   </p>
                 </div>
-                <Button
-                  onClick={handleUpgradeToYearly}
-                  disabled={upgradingToYearly}
-                  className="shrink-0"
-                  size="sm"
-                >
-                  {upgradingToYearly ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  {premiumYearly} ₽/год
+              </div>
+            </div>
+          )}
+          {!isCanceled && subscription.auto_renew && isMonthly && hasPaymentMethod && (
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300">
+              ✓ Подписка продлевается автоматически {formattedEnd}. Можно отменить в любой момент — доступ сохранится до конца оплаченного периода.
+            </div>
+          )}
+          {!isCanceled && !subscription.auto_renew && (
+            <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
+              ℹ️ Автопродление отключено. За 3 дня до окончания мы пришлём напоминание — продлите вручную, чтобы сохранить доступ.
+            </div>
+          )}
+
+          {/* Годовая подписка удалена — апгрейд и yearly-баннер сняты. */}
+
+          {/* Cancel button (not shown if already canceled) */}
+          {!isCanceled && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" className="w-full text-muted-foreground hover:text-destructive">
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Отменить подписку
                 </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Yearly subscription info */}
-          {isYearly && (
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                ✓ У вас годовая подписка — максимальная экономия!
-              </p>
-            </div>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Отменить подписку Premium?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Доступ ко всем Премиум-функциям сохранится до {formattedEnd}.
+                    После этой даты вы перейдёте на бесплатный тариф «Дыхание».
+                    Отмену можно сделать в любой момент — оплаченный период не сгорает.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={canceling}>Не отменять</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleCancel} disabled={canceling}>
+                    {canceling && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Да, отменить
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </CardContent>
       </Card>

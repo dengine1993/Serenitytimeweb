@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Heart, Sparkles, MessageCircle, Lightbulb } from "lucide-react";
+import { Sparkles, MessageCircle, Lightbulb, Compass } from "lucide-react";
 
 interface EmotionalPromptsProps {
   onPromptClick: (prompt: string) => void;
@@ -7,26 +7,26 @@ interface EmotionalPromptsProps {
 
 const PROMPTS = [
   {
-    icon: Heart,
-    text: "Сегодня было тяжело...",
-    color: "from-red-400/20 to-pink-400/20",
-    iconColor: "text-red-200"
+    icon: MessageCircle,
+    text: "Хочу подумать вслух",
+    color: "from-emerald-400/20 to-teal-400/20",
+    iconColor: "text-emerald-200"
   },
   {
-    icon: Sparkles,
-    text: "Как справиться с тревогой?",
+    icon: Compass,
+    text: "Помоги разобраться в ситуации",
     color: "from-blue-400/20 to-purple-400/20",
     iconColor: "text-blue-200"
   },
   {
-    icon: MessageCircle,
-    text: "Мне нужна поддержка",
+    icon: Sparkles,
+    text: "Хочу понять себя лучше",
     color: "from-purple-400/20 to-indigo-400/20",
     iconColor: "text-purple-200"
   },
   {
     icon: Lightbulb,
-    text: "Что со мной происходит?",
+    text: "Расскажи, как я расту",
     color: "from-yellow-400/20 to-orange-400/20",
     iconColor: "text-yellow-200"
   }

@@ -1,43 +1,18 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendMail } from "../_shared/smtp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const UNISENDER_GO_API_KEY = Deno.env.get("UNISENDER_GO_API_KEY");
-
 async function sendEmail(to: string, subject: string, html: string) {
-  if (!UNISENDER_GO_API_KEY) {
-    console.log("UNISENDER_GO_API_KEY not configured, skipping email");
-    return;
+  const result = await sendMail({ to, subject, html });
+  if (!result.ok) {
+    throw new Error(`Email send failed: ${result.error}`);
   }
-  
-  const response = await fetch("https://go2.unisender.ru/ru/transactional/api/v1/email/send.json", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-KEY": UNISENDER_GO_API_KEY,
-    },
-    body: JSON.stringify({
-      message: {
-        recipients: [{ email: to }],
-        body: { html },
-        subject,
-        from_email: "noreply@serenitypeople.ru",
-        from_name: "Безмятежные",
-      }
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("UniSender Go API error:", error);
-    throw new Error(`Email send failed: ${error}`);
-  }
-
-  return response.json();
+  return result;
 }
 
 serve(async (req) => {
@@ -64,7 +39,7 @@ serve(async (req) => {
     // Get active subscriptions expiring in 3 days
     const { data: expiringSubscriptions, error: subsError } = await supabaseAdmin
       .from("subscriptions")
-      .select("id, user_id, plan, current_period_end, auto_renew, billing_interval")
+      .select("id, user_id, plan, current_period_end, auto_renew, billing_interval, yookassa_payment_method_id, canceled_at")
       .eq("status", "active")
       .gte("current_period_end", threeDaysStart.toISOString())
       .lte("current_period_end", threeDaysEnd.toISOString());
@@ -118,23 +93,23 @@ serve(async (req) => {
           continue;
         }
 
-        // Create in-app notification
-        const notificationMessage = sub.auto_renew 
-          ? `Ваша подписка «Опора» автоматически продлится ${formattedDate}. Убедитесь, что на карте достаточно средств.`
+        // Текст зависит от того, есть ли у нас сохранённый payment_method
+        // и включено ли автопродление.
+        const willAutoRenew = sub.auto_renew && sub.yookassa_payment_method_id && !sub.canceled_at;
+        const notificationMessage = willAutoRenew
+          ? `Ваша подписка «Опора» автоматически продлится ${formattedDate}. Если хотите отменить — сделайте это в разделе Premium до этой даты.`
           : `Ваша подписка «Опора» заканчивается ${formattedDate}. Продлите её, чтобы сохранить доступ ко всем возможностям.`;
 
         await supabaseAdmin.from("notifications").insert({
           user_id: sub.user_id,
           type: "subscription_expiry_reminder",
-          title: sub.auto_renew ? "Скоро продление подписки" : "Подписка скоро закончится",
+          title: "Подписка скоро закончится",
           message: notificationMessage
         });
 
         // Send email if user has email
         if (userEmail) {
-          const emailSubject = sub.auto_renew 
-            ? "Напоминание о продлении подписки «Опора»"
-            : "Ваша подписка «Опора» скоро заканчивается";
+          const emailSubject = "Ваша подписка «Опора» скоро заканчивается";
 
           const emailHtml = `
             <!DOCTYPE html>
@@ -155,29 +130,23 @@ serve(async (req) => {
             <body>
               <div class="container">
                 <div class="header">
-                  <div class="logo">🌿 Безмятежные</div>
+                  <div class="logo">🌿 Восход</div>
                 </div>
                 <div class="content">
                   <p>Привет, ${userName}! 👋</p>
-                  ${sub.auto_renew ? `
-                    <p>Напоминаем, что ваша подписка <span class="highlight">«Опора»</span> автоматически продлится <strong>${formattedDate}</strong>.</p>
-                    <p>Убедитесь, что на привязанной карте достаточно средств для оплаты.</p>
-                    <p>Если вы хотите отменить автопродление, вы можете сделать это в настройках подписки.</p>
-                  ` : `
-                    <p>Напоминаем, что ваша подписка <span class="highlight">«Опора»</span> заканчивается <strong>${formattedDate}</strong>.</p>
-                    <p>Чтобы продолжить пользоваться всеми возможностями:</p>
-                    <ul>
-                      <li>🧠 Глубокие разборы с Jiva</li>
-                      <li>🧩 Память о ваших переживаниях</li>
-                      <li>🎨 Полноценная арт-терапия</li>
-                      <li>💬 Безлимитная поддержка 24/7</li>
-                    </ul>
-                    <p>Продлите подписку, чтобы не потерять доступ:</p>
-                    <a href="https://serenitypeople.ru/premium" class="cta">Продлить подписку</a>
-                  `}
+                  <p>Напоминаем, что ваша подписка <span class="highlight">«Опора»</span> заканчивается <strong>${formattedDate}</strong>.</p>
+                  <p>Чтобы продолжить пользоваться всеми возможностями:</p>
+                  <ul>
+                    <li>🧠 Глубокие разборы с Jiva</li>
+                    <li>🧩 Память о ваших переживаниях</li>
+                    <li>🎨 Полноценная арт-терапия</li>
+                    <li>💬 Безлимитная поддержка 24/7</li>
+                  </ul>
+                  <p>Продлите подписку, чтобы не потерять доступ:</p>
+                  <a href="https://newdawnjourney.com/premium" class="cta">Продлить подписку</a>
                 </div>
                 <div class="footer">
-                  <p>С заботой, команда Безмятежных 💚</p>
+                  <p>С заботой, команда Восхода 💚</p>
                   <p>Если у вас есть вопросы — мы всегда рядом.</p>
                 </div>
               </div>

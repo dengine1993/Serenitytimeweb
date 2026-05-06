@@ -19,7 +19,7 @@ export const FeatureCard = ({ icon: Icon, title, description, link, delay = 0, c
         comingSoon 
           ? 'cursor-default opacity-60' 
           : premium 
-            ? 'hover:border-primary/40 hover:shadow-[0_20px_50px_rgba(120,146,255,0.2)]'
+            ? 'hover:border-primary/40 hover:shadow-[0_20px_50px_rgba(251,146,60,0.2)]'
             : 'hover:border-secondary/30 hover:shadow-[0_20px_50px_rgba(74,209,214,0.15)]'
       }`}
       whileHover={comingSoon ? {} : { y: -4, scale: 1.02 }}

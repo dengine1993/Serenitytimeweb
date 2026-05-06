@@ -10,6 +10,20 @@ import { supabase } from '@/integrations/supabase/client';
 
 type PaymentStatus = 'loading' | 'succeeded' | 'processing' | 'failed';
 
+const SUNRISE_CTA =
+  'w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white border border-orange-300/30 shadow-[0_0_22px_rgba(249,115,22,0.45)]';
+
+const SUNRISE_CARD =
+  'max-w-md w-full bg-card/60 backdrop-blur-xl border border-orange-400/20 shadow-[0_30px_80px_-20px_rgba(249,115,22,0.3)] p-8 text-center';
+
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-sunrise-ambient flex items-center justify-center px-4">
+      <Card className={SUNRISE_CARD}>{children}</Card>
+    </div>
+  );
+}
+
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -70,9 +84,9 @@ export default function PaymentSuccess() {
 
   useEffect(() => {
     if (user && paymentId) {
-      trackEvent('payment_success', { 
-        user_id: user.id, 
-        payment_id: paymentId 
+      trackEvent('payment_success', {
+        user_id: user.id,
+        payment_id: paymentId,
       });
       pollPaymentStatus();
     } else if (!paymentId) {
@@ -82,117 +96,70 @@ export default function PaymentSuccess() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-background-secondary flex items-center justify-center px-4">
-        <Card className="max-w-md w-full bg-card/50 backdrop-blur-md border-border p-8 text-center">
-          <Loader2 className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-foreground mb-2">
-            Обрабатываем платёж...
-          </h2>
-          <p className="text-muted-foreground">
-            Это займёт всего несколько секунд
-          </p>
-        </Card>
-      </div>
+      <Wrapper>
+        <Loader2 className="w-16 h-16 text-amber-300 animate-spin mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-foreground mb-2">
+          Обрабатываем платёж...
+        </h2>
+        <p className="text-muted-foreground">
+          Это займёт всего несколько секунд
+        </p>
+      </Wrapper>
     );
   }
 
   if (status === 'processing') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-background-secondary flex items-center justify-center px-4">
-        <Card className="max-w-md w-full bg-card/50 backdrop-blur-md border-border p-8 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-yellow-500/20 mb-6">
-            <Loader2 className="w-12 h-12 text-yellow-500 animate-spin" />
-          </div>
-          
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Платёж обрабатывается
-          </h1>
-          
-          <p className="text-muted-foreground mb-8">
-            Подождите немного и обновите страницу или перейдите в профиль.
-          </p>
+      <Wrapper>
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-500/15 ring-2 ring-amber-400/30 mb-6">
+          <Loader2 className="w-12 h-12 text-amber-300 animate-spin" />
+        </div>
 
-          <div className="space-y-3">
-            <Button
-              onClick={() => window.location.reload()}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-            >
-              Обновить страницу
-            </Button>
-            
-            <Button
-              onClick={() => navigate('/settings')}
-              variant="ghost"
-              className="w-full text-muted-foreground hover:text-foreground"
-            >
-              Перейти в настройки
-            </Button>
-          </div>
-        </Card>
-      </div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">
+          Платёж обрабатывается
+        </h1>
+
+        <p className="text-muted-foreground mb-8">
+          Подождите немного и обновите страницу или перейдите в профиль.
+        </p>
+
+        <div className="space-y-3">
+          <Button onClick={() => window.location.reload()} className={SUNRISE_CTA}>
+            Обновить страницу
+          </Button>
+
+          <Button
+            onClick={() => navigate('/settings')}
+            variant="ghost"
+            className="w-full text-muted-foreground hover:text-foreground"
+          >
+            Перейти в настройки
+          </Button>
+        </div>
+      </Wrapper>
     );
   }
 
   if (status === 'failed') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-background-secondary flex items-center justify-center px-4">
-        <Card className="max-w-md w-full bg-card/50 backdrop-blur-md border-border p-8 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-500/20 mb-6">
-            <AlertCircle className="w-12 h-12 text-red-500" />
-          </div>
-          
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Ошибка платежа
-          </h1>
-          
-          <p className="text-muted-foreground mb-8">
-            Что-то пошло не так. Попробуйте ещё раз или обратитесь в поддержку.
-          </p>
-
-          <div className="space-y-3">
-            <Button
-              onClick={() => navigate('/premium')}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-            >
-              Попробовать снова
-            </Button>
-            
-            <Button
-              onClick={() => navigate('/app')}
-              variant="ghost"
-              className="w-full text-muted-foreground hover:text-foreground"
-            >
-              На главную
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background-secondary flex items-center justify-center px-4">
-      <Card className="max-w-md w-full bg-card/50 backdrop-blur-md border-border p-8 text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/20 mb-6">
-          <CheckCircle className="w-12 h-12 text-green-500" />
+      <Wrapper>
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-500/20 ring-2 ring-red-400/30 mb-6">
+          <AlertCircle className="w-12 h-12 text-red-400" />
         </div>
-        
+
         <h1 className="text-3xl font-bold text-foreground mb-2">
-          Оплата прошла успешно!
+          Ошибка платежа
         </h1>
-        
+
         <p className="text-muted-foreground mb-8">
-          Спасибо за поддержку проекта. Ваша подписка активирована.
+          Что-то пошло не так. Попробуйте ещё раз или обратитесь в поддержку.
         </p>
 
         <div className="space-y-3">
-          <Button
-            onClick={() => navigate('/settings')}
-            className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-          >
-            Перейти в настройки
+          <Button onClick={() => navigate('/premium')} className={SUNRISE_CTA}>
+            Попробовать снова
           </Button>
-          
+
           <Button
             onClick={() => navigate('/app')}
             variant="ghost"
@@ -201,7 +168,40 @@ export default function PaymentSuccess() {
             На главную
           </Button>
         </div>
-      </Card>
-    </div>
+      </Wrapper>
+    );
+  }
+
+  return (
+    <Wrapper>
+      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-orange-500/25 to-rose-500/20 ring-2 ring-orange-400/40 mb-6">
+        <CheckCircle
+          className="w-12 h-12 text-amber-200"
+          style={{ filter: 'drop-shadow(0 0 18px rgba(245,158,11,0.65))' }}
+        />
+      </div>
+
+      <h1 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-orange-300 via-amber-200 to-rose-300">
+        Оплата прошла успешно!
+      </h1>
+
+      <p className="text-muted-foreground mb-8">
+        Спасибо за поддержку проекта. Ваша подписка активирована.
+      </p>
+
+      <div className="space-y-3">
+        <Button onClick={() => navigate('/settings')} className={SUNRISE_CTA}>
+          Перейти в настройки
+        </Button>
+
+        <Button
+          onClick={() => navigate('/app')}
+          variant="ghost"
+          className="w-full text-muted-foreground hover:text-foreground"
+        >
+          На главную
+        </Button>
+      </div>
+    </Wrapper>
   );
 }

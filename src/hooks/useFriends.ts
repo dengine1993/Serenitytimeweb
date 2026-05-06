@@ -265,6 +265,11 @@ export function useFriends() {
       metadata: {}
     });
 
+    // Push notification (fire-and-forget)
+    supabase.functions.invoke('notify-event', {
+      body: { type: 'friend_request', recipient_id: friendId },
+    }).catch(() => undefined);
+
     await loadOutgoingRequests();
     return { success: true };
   };
@@ -323,8 +328,26 @@ export function useFriends() {
     await loadOutgoingRequests();
   };
 
-  const removeFriend = async (friendshipId: string) => {
+  const removeFriend = async (userIdOrFriendshipId: string) => {
     if (!user) return;
+
+    // Try as friendship id first; if no row matches, treat the argument as a peer user id
+    const { data: byId } = await supabase
+      .from('friendships')
+      .select('id')
+      .eq('id', userIdOrFriendshipId)
+      .maybeSingle();
+
+    let friendshipId: string | null = byId?.id ?? null;
+
+    if (!friendshipId) {
+      const friendship = friends.find(
+        (f) => f.friend_id === userIdOrFriendshipId || f.user_id === userIdOrFriendshipId
+      );
+      friendshipId = friendship?.id ?? null;
+    }
+
+    if (!friendshipId) return;
 
     await supabase
       .from('friendships')

@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:capacitor": "vite build --mode capacitor",
     "start": "serve dist -s -l ${PORT:-3000}",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
@@ -22,6 +23,16 @@
     "monitor:logs": "deno run --allow-env --allow-net scripts/monitoring/poll-logs.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/device": "^8.0.2",
+    "@capacitor/ios": "^8.3.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/push-notifications": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@hcaptcha/react-hcaptcha": "^1.14.0",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",
@@ -56,6 +67,8 @@
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@react-three/postprocessing": "^2.19.1",
+    "@sentry/capacitor": "^4.0.0",
+    "@sentry/react": "^10.51.0",
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.10.85",
     "@supabase/supabase-js": "^2.86.0",
@@ -96,6 +109,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.1",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",

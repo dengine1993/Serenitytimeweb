@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Heart, Shield, Wind, MessageCircle } from "lucide-react";
+import { Zap, Compass, Sunrise, Footprints } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StepGoalProps {
@@ -7,10 +7,10 @@ interface StepGoalProps {
 }
 
 const GOALS = [
-    { id: "silence", label: "Тишину", icon: Wind, desc: "Покой в голове", color: "from-cyan-500 to-blue-600" },
-    { id: "support", label: "Опору", icon: Shield, desc: "Твёрдую почву под ногами", color: "from-emerald-500 to-teal-600" },
-    { id: "understanding", label: "Понимание", icon: MessageCircle, desc: "Быть услышанным", color: "from-violet-500 to-purple-600" },
-    { id: "breathe", label: "Просто выдохнуть", icon: Heart, desc: "Хоть на минуту", color: "from-rose-500 to-pink-600" },
+    { id: "energy", label: "Вернуть энергию", icon: Zap, desc: "Перестать выживать — начать жить", color: "from-amber-500 to-orange-600" },
+    { id: "unstuck", label: "Выйти из ступора", icon: Sunrise, desc: "Снова двинуться с места", color: "from-rose-500 to-pink-600" },
+    { id: "direction", label: "Найти своё направление", icon: Compass, desc: "Понять, куда хочу идти", color: "from-violet-500 to-purple-600" },
+    { id: "doing", label: "Начать делать", icon: Footprints, desc: "Маленький шаг каждый день", color: "from-emerald-500 to-teal-600" },
 ];
 
 export const StepGoal = ({ onNext }: StepGoalProps) => {
@@ -23,10 +23,10 @@ export const StepGoal = ({ onNext }: StepGoalProps) => {
         >
             <div className="space-y-2">
                 <h2 className="text-3xl font-bold text-white">
-                    Чего ты хочешь?
+                    Куда хочешь прийти?
                 </h2>
                 <p className="text-white/60">
-                    Что бы ты хотел почувствовать?
+                    Не «от чего», а «к чему». Выбери одно.
                 </p>
             </div>
 

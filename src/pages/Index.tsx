@@ -14,12 +14,23 @@ import { getDevicePerformance, shouldUseSimpleEffects } from "@/utils/performanc
 import logoImage from "@/assets/logo-bezm.png";
 import { TwoPathsSection } from "@/components/landing/TwoPathsSection";
 import { WhatsInside } from "@/components/landing/WhatsInside";
+import { MeetJiva } from "@/components/landing/MeetJiva";
 import { FAQ } from "@/components/landing/FAQ";
 import { StickyCtaBar } from "@/components/landing/StickyCtaBar";
 import { FloatingCtaButton } from "@/components/landing/FloatingCtaButton";
 
 import { ScrollToTop } from "@/components/landing/ScrollToTop";
 import { LandingLoader } from "@/components/landing/LandingLoader";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import type { LegalDocType } from "@/components/legal/LegalModalProvider";
+
+const LEGAL_ROUTES: Record<LegalDocType, string> = {
+  privacy: '/privacy',
+  offer: '/offer',
+  refund: '/refund',
+  disclaimer: '/disclaimer',
+  seller: '/seller',
+};
 
 const AnimatedShaderBackground = lazy(() => import("@/components/ui/animated-shader-background"));
 const FloatingOrbs = lazy(() =>
@@ -44,6 +55,14 @@ const MorphingBlob = lazy(() =>
 const Index = () => {
   const auth = useAuth();
   const user = auth?.user;
+  const legalLink = (type: LegalDocType, label: string, mobile = false) => (
+    <Link
+      to={LEGAL_ROUTES[type]}
+      className={mobile ? "hover:text-white/80 transition-colors text-left" : "hover:text-white/80 transition-colors"}
+    >
+      {label}
+    </Link>
+  );
   const { t } = useI18n();
   const devicePerf = useMemo(() => getDevicePerformance(), []);
   const [simpleEffects, setSimpleEffects] = useState(() => shouldUseSimpleEffects());
@@ -136,7 +155,7 @@ const Index = () => {
           <ScrollProgress />
         </Suspense>
       )}
-      <div className="relative min-h-screen overflow-x-hidden bg-[#0A0F18] text-white">
+      <div className="relative min-h-screen overflow-x-hidden text-white" style={{ background: 'radial-gradient(ellipse 120% 80% at 50% 0%, #3a1240 0%, #1a0a2e 35%, #0d0820 70%, #07050f 100%)' }}>
         {/* Aurora background - only on desktop high performance */}
         {!isLowPerf && !isMobile && (
           <Suspense fallback={null}>
@@ -173,7 +192,7 @@ const Index = () => {
           <>
             <Suspense fallback={null}>
               <MorphingBlob
-              color="rgba(255, 226, 189, 0.18)"
+              color="rgba(251, 146, 60, 0.22)"
               size="700px"
               position="top-24 -left-40"
               delay={0}
@@ -181,7 +200,7 @@ const Index = () => {
             </Suspense>
             <Suspense fallback={null}>
               <MorphingBlob
-              color="rgba(120, 146, 255, 0.12)"
+              color="rgba(244, 63, 94, 0.18)"
               size="600px"
               position="top-1/3 -right-32"
               delay={2}
@@ -189,7 +208,7 @@ const Index = () => {
             </Suspense>
             <Suspense fallback={null}>
               <MorphingBlob
-              color="rgba(74, 209, 214, 0.1)"
+              color="rgba(253, 224, 71, 0.14)"
               size="520px"
               position="bottom-16 left-1/4"
               delay={4}
@@ -204,24 +223,24 @@ const Index = () => {
           <div className="flex items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-3">
               {prefersReducedMotion ? (
-                <div className="relative h-11 w-11 flex-shrink-0">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-secondary/30 rounded-full blur-lg" />
+                <div className="relative h-14 w-14 sm:h-16 sm:w-16 flex-shrink-0">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-secondary/30 rounded-full blur-xl" />
                   <img 
                     src={logoImage} 
-                    alt="Безмятежные" 
+                    alt="Восход" 
                     className="relative w-full h-full object-contain rounded-full"
-                    style={{ filter: 'drop-shadow(0 0 12px rgba(120, 146, 255, 0.4))' }}
+                    style={{ filter: 'drop-shadow(0 0 14px rgba(251, 191, 36, 0.45))' }}
                   />
                 </div>
               ) : (
                 <motion.div
-                  className="relative h-11 w-11 flex-shrink-0"
+                  className="relative h-14 w-14 sm:h-16 sm:w-16 flex-shrink-0"
                   whileHover={{ scale: 1.08 }}
                   transition={{ duration: 0.3 }}
                 >
                   {/* Pulsing ring around logo */}
                   <motion.div
-                    className="absolute inset-[-6px] rounded-full border border-cyan-400/40"
+                    className="absolute inset-[-8px] rounded-full border border-amber-400/40"
                     animate={{ 
                       scale: [1, 1.3, 1],
                       opacity: [0.6, 0, 0.6]
@@ -229,7 +248,7 @@ const Index = () => {
                     transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                   />
                   <motion.div 
-                    className="absolute inset-0 bg-gradient-to-br from-cyan-400/30 to-violet-500/30 rounded-full blur-lg"
+                    className="absolute inset-0 bg-gradient-to-br from-amber-400/30 to-rose-500/30 rounded-full blur-lg"
                     animate={{ 
                       opacity: [0.6, 1, 0.6],
                       scale: [1, 1.1, 1]
@@ -238,14 +257,15 @@ const Index = () => {
                   />
                   <img 
                     src={logoImage} 
-                    alt="Безмятежные" 
+                    alt="Восход" 
                     className="relative w-full h-full object-contain rounded-full"
-                    style={{ filter: 'drop-shadow(0 0 16px rgba(120, 146, 255, 0.5))' }}
+                    style={{ filter: 'drop-shadow(0 0 16px rgba(251, 191, 36, 0.45))' }}
                   />
                 </motion.div>
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
+              <LanguageSwitcher />
               {isIOS && (
                 <Link to="/install">
                   <Button 
@@ -289,7 +309,7 @@ const Index = () => {
           </div>
 
           {/* Gradient background glow for mobile */}
-          <div className="absolute inset-0 -top-32 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_50%_20%,rgba(120,146,255,0.2),transparent_70%),radial-gradient(ellipse_60%_40%_at_20%_80%,rgba(139,92,246,0.12),transparent_50%),radial-gradient(ellipse_60%_40%_at_80%_70%,rgba(6,182,212,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 -top-32 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_50%_20%,rgba(251,146,60,0.2),transparent_70%),radial-gradient(ellipse_60%_40%_at_20%_80%,rgba(244,63,94,0.12),transparent_50%),radial-gradient(ellipse_60%_40%_at_80%_70%,rgba(251,191,36,0.1),transparent_50%)]" />
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -301,15 +321,15 @@ const Index = () => {
             {/* Brand Name with gradient and glow */}
             <div className="mb-4 sm:mb-6 relative">
               {/* Glow layer behind text */}
-              <div className="absolute inset-0 blur-3xl opacity-50 bg-gradient-to-r from-cyan-500/40 via-primary/30 to-violet-500/40 scale-150" />
+              <div className="absolute inset-0 blur-3xl opacity-50 bg-gradient-to-r from-amber-500/40 via-primary/30 to-rose-500/40 scale-150" />
               
               {prefersReducedMotion ? (
-                <h1 className="relative font-hero font-medium text-5xl sm:text-7xl md:text-8xl lg:text-9xl tracking-tight bg-gradient-to-r from-cyan-200 via-white to-violet-300 bg-clip-text text-transparent bg-[length:200%_auto]">
+                <h1 className="relative font-hero font-medium text-5xl sm:text-7xl md:text-8xl lg:text-9xl tracking-tight bg-gradient-to-r from-amber-200 via-white to-rose-300 bg-clip-text text-transparent bg-[length:200%_auto]">
                   {t('index.hero.brandName')}
                 </h1>
               ) : (
                 <motion.h1
-                  className="relative font-hero font-medium text-5xl sm:text-7xl md:text-8xl lg:text-9xl tracking-tight bg-gradient-to-r from-cyan-200 via-white to-violet-300 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-x"
+                  className="relative font-hero font-medium text-5xl sm:text-7xl md:text-8xl lg:text-9xl tracking-tight bg-gradient-to-r from-amber-200 via-white to-rose-300 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-x"
                   initial={{ opacity: 1, scale: 1 }}
                   animate={{
                     scale: [1, 1.02, 1],
@@ -326,12 +346,12 @@ const Index = () => {
             </div>
 
             {/* Slogan */}
-            <h2 className="text-xl md:text-2xl text-white/70 font-light leading-snug max-w-md mx-auto mb-4 mt-2">
+            <h2 className="text-lg md:text-2xl text-white/75 font-light leading-relaxed max-w-md mx-auto mb-2 mt-2 whitespace-pre-line">
               {t('index.hero.slogan')}
             </h2>
 
             <motion.div
-              className="flex flex-col items-center gap-4 mt-10"
+              className="flex flex-col items-center gap-3 mt-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.4 }}
@@ -339,7 +359,7 @@ const Index = () => {
               {/* Primary CTA */}
               <Link to={user ? "/app" : "/auth"} className="w-full sm:w-auto">
                 <MagneticButton
-                  className="w-full sm:w-auto px-8 sm:px-12 py-4 sm:py-5 text-base sm:text-lg font-medium rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_0_24px_rgba(16,185,129,0.25)] hover:shadow-[0_0_32px_rgba(16,185,129,0.4)] border border-emerald-400/20"
+                  className="w-full sm:w-auto px-8 sm:px-12 py-4 sm:py-5 text-base sm:text-lg font-medium rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_0_24px_rgba(249,115,22,0.25)] hover:shadow-[0_0_32px_rgba(249,115,22,0.4)] border border-orange-400/20"
                 >
                   <span className="flex items-center justify-center gap-2">
                     {t('index.hero.ctaStart')}
@@ -348,34 +368,12 @@ const Index = () => {
                 </MagneticButton>
               </Link>
 
-              {/* Trust badges - 4 шт, отражают разные уровни помощи */}
-              <div className="flex flex-wrap justify-center gap-1.5 max-w-full px-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/65 whitespace-nowrap">
-                  <span className="font-extrabold text-rose-300 tracking-wider text-[10px]">SOS</span>
-                  {t('index.hero.trustBadges.0')}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/65 whitespace-nowrap">
-                  <BookHeart className="w-3 h-3 text-emerald-300" />
-                  {t('index.hero.trustBadges.1')}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/65 whitespace-nowrap">
-                  <Users className="w-3 h-3 text-amber-300" />
-                  {t('index.hero.trustBadges.2')}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/65 whitespace-nowrap">
-                  <MessageCircle className="w-3 h-3 text-violet-300" />
-                  {t('index.hero.trustBadges.3')}
-                </span>
-              </div>
-
-              {/* Crisis SOS button - prominent red */}
-              <Link to="/crisis" className="mt-2">
-                <button className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-[0_0_24px_rgba(239,68,68,0.5)] hover:shadow-[0_0_32px_rgba(239,68,68,0.7)] border border-red-400/40 transition-all group">
-                  <span className="font-extrabold tracking-widest text-sm">SOS</span>
-                  <span className="text-sm">{t('index.hero.ctaCrisisLink')}</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              </Link>
+              {/* Subline */}
+              {t('index.hero.ctaSubline') && (
+                <p className="text-xs sm:text-sm text-white/55">
+                  {t('index.hero.ctaSubline')}
+                </p>
+              )}
             </motion.div>
 
           </motion.div>
@@ -384,7 +382,7 @@ const Index = () => {
           {!isMobile && (
             <>
               <motion.div
-                className="absolute top-20 left-10 w-20 h-20 rounded-full bg-primary/10 blur-2xl"
+                className="absolute top-20 left-10 w-20 h-20 rounded-full bg-amber-400/15 blur-2xl"
                 animate={{
                   y: [0, -30, 0],
                   scale: [1, 1.2, 1],
@@ -396,7 +394,7 @@ const Index = () => {
                 }}
               />
               <motion.div
-                className="absolute bottom-40 right-20 w-32 h-32 rounded-full bg-secondary/10 blur-3xl"
+                className="absolute bottom-40 right-20 w-32 h-32 rounded-full bg-rose-400/12 blur-3xl"
                 animate={{
                   y: [0, 40, 0],
                   scale: [1, 1.3, 1],
@@ -411,7 +409,10 @@ const Index = () => {
           )}
         </section>
 
-        {/* What's Inside — 3 уровня помощи */}
+        {/* Знакомство с Дживой */}
+        <MeetJiva />
+
+        {/* What's Inside — 3 формы поддержки */}
         <WhatsInside />
 
         {/* Two Paths Section - Free vs Premium */}
@@ -434,35 +435,29 @@ const Index = () => {
                   Установить приложение
                 </Link>
               )}
-              <Link to="/privacy" className="hover:text-white/80 transition-colors">Политика конфиденциальности</Link>
-              <Link to="/offer" className="hover:text-white/80 transition-colors">Публичная оферта</Link>
-              <Link to="/refund" className="hover:text-white/80 transition-colors">Условия возврата</Link>
-              <Link to="/disclaimer" className="hover:text-white/80 transition-colors">Отказ от ответственности</Link>
-              <Link to="/seller" className="hover:text-white/80 transition-colors">Информация о продавце</Link>
+              {legalLink('privacy', 'Политика конфиденциальности')}
+              {legalLink('offer', 'Публичная оферта')}
+              {legalLink('refund', 'Условия возврата')}
+              {legalLink('disclaimer', 'Условия использования')}
+              {legalLink('seller', 'Информация о продавце')}
             </nav>
             {/* Mobile: Collapsed links */}
-            <details className="sm:hidden text-center group">
-              <summary className="text-xs text-white/50 cursor-pointer list-none flex items-center justify-center gap-1 hover:text-white/70 transition-colors">
+            <details className="sm:hidden w-full max-w-xs text-center group">
+              <summary className="text-xs text-white/50 cursor-pointer list-none inline-flex items-center justify-center gap-1.5 hover:text-white/70 transition-colors py-1">
                 Правовая информация
                 <svg className="w-3 h-3 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </summary>
-              <nav className="flex flex-col gap-2 mt-3 text-xs text-white/50">
-                {isIOS && (
-                  <Link to="/install" className="hover:text-white/80 transition-colors flex items-center justify-center gap-1.5">
-                    <Smartphone className="w-3 h-3" />
-                    Установить приложение
-                  </Link>
-                )}
-                <Link to="/privacy" className="hover:text-white/80 transition-colors">Политика конфиденциальности</Link>
-                <Link to="/offer" className="hover:text-white/80 transition-colors">Публичная оферта</Link>
-                <Link to="/refund" className="hover:text-white/80 transition-colors">Условия возврата</Link>
-                <Link to="/disclaimer" className="hover:text-white/80 transition-colors">Отказ от ответственности</Link>
-                <Link to="/seller" className="hover:text-white/80 transition-colors">Информация о продавце</Link>
+              <nav className="mt-4 flex flex-col items-center gap-2.5 text-xs text-white/55">
+                {legalLink('privacy', 'Политика конфиденциальности', true)}
+                {legalLink('offer', 'Публичная оферта', true)}
+                {legalLink('refund', 'Условия возврата', true)}
+                {legalLink('disclaimer', 'Условия использования', true)}
+                {legalLink('seller', 'Информация о продавце', true)}
               </nav>
             </details>
-            <p className="text-xs text-white/60">© 2026 Безмятежные • v{__APP_VERSION__}</p>
+            <p className="text-xs text-white/60">© 2026 Восход • v{__APP_VERSION__}</p>
           </div>
         </footer>
         

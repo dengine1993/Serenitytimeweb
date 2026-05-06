@@ -6,26 +6,9 @@ import { cn } from '@/lib/utils';
 
 const actions = [
   {
-    id: 'crisis',
-    icon: null as any,
-    title: 'Срочная помощь',
-    href: '/crisis',
-    color: 'text-destructive',
-    lightColor: 'text-red-500',
-    bgColor: 'from-destructive/10 via-card/40',
-    lightBgColor: 'bg-red-50/80',
-    borderColor: 'border-destructive/40 hover:border-destructive/60',
-    lightBorderColor: 'border-red-200/60 hover:border-red-300',
-    glowColor: 'hover:shadow-destructive/30',
-    lightGlowColor: 'hover:shadow-red-200/50',
-    pulse: true,
-    urgent: true,
-    size: 'large',
-  },
-  {
     id: 'art',
     icon: PaintBrushIcon,
-    title: 'Арт-терапия',
+    title: 'Образ дня',
     href: '/art-therapy',
     color: 'text-violet',
     lightColor: 'text-violet-500',
@@ -35,7 +18,6 @@ const actions = [
     lightBorderColor: 'border-violet-200/60 hover:border-violet-300',
     glowColor: 'hover:shadow-violet/30',
     lightGlowColor: 'hover:shadow-violet-200/50',
-    pulse: false,
   },
   {
     id: 'diary',
@@ -50,7 +32,6 @@ const actions = [
     lightBorderColor: 'border-emerald-200/60 hover:border-emerald-300',
     glowColor: 'hover:shadow-emerald/30',
     lightGlowColor: 'hover:shadow-emerald-200/50',
-    pulse: false,
   },
 ];
 
@@ -75,10 +56,9 @@ export function QuickActionsList() {
           transition={{ delay: 0.2 + index * 0.05 }}
           onClick={() => navigate(action.href)}
           className={cn(
-            "relative overflow-hidden w-full flex items-center gap-3 rounded-2xl transition-all duration-300 group",
+            "relative overflow-hidden w-full flex items-center gap-3 rounded-2xl transition-all duration-300 group p-3",
             "hover:scale-105 active:scale-95 gpu-accelerated",
             "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background",
-            action.size === 'large' ? 'p-4' : 'p-3',
             theme === 'light' 
               ? cn(
                   action.lightBgColor,
@@ -97,20 +77,6 @@ export function QuickActionsList() {
           aria-label={action.title}
           type="button"
         >
-          {/* Enhanced pulse ring for crisis button - dark mode only */}
-          {action.pulse && theme === 'dark' && (
-            <>
-              <span className="absolute inset-0 rounded-2xl ring-2 ring-destructive/40 ring-offset-2 ring-offset-background/50 animate-pulse-glow pointer-events-none" />
-              <span className="absolute -inset-2 rounded-2xl bg-destructive/10 blur-xl opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none" />
-            </>
-          )}
-          
-          {/* Light mode pulse for crisis */}
-          {action.pulse && theme === 'light' && (
-            <span className="absolute inset-0 rounded-2xl ring-2 ring-red-300/50 animate-pulse pointer-events-none" />
-          )}
-          
-          {/* Ripple effect container */}
           <span className="absolute inset-0 overflow-hidden rounded-2xl">
             <span className={cn(
               "absolute inset-0 rounded-full scale-0 group-hover:animate-ripple",
@@ -118,28 +84,17 @@ export function QuickActionsList() {
             )} />
           </span>
           
-          {action.urgent ? (
-            <span
-              className="relative z-10 inline-flex items-center justify-center px-2 h-7 min-w-[44px] rounded-lg text-xs font-extrabold tracking-widest text-white bg-red-600 shadow-[0_0_14px_rgba(239,68,68,0.55)]"
-              aria-hidden="true"
-            >
-              SOS
-            </span>
-          ) : (
-            <div className={cn(
-              "relative p-1.5 rounded-lg transition-transform duration-300 group-hover:scale-110",
-              theme === 'light' ? "bg-white/60" : "bg-background/50",
-              action.pulse && "animate-pulse"
-            )}>
-              <action.icon className={cn(
-                action.size === 'large' ? 'h-6 w-6' : 'h-5 w-5',
-                theme === 'light' ? action.lightColor : action.color
-              )} />
-            </div>
-          )}
+          <div className={cn(
+            "relative p-1.5 rounded-lg transition-transform duration-300 group-hover:scale-110",
+            theme === 'light' ? "bg-white/60" : "bg-background/50"
+          )}>
+            <action.icon className={cn(
+              'h-5 w-5',
+              theme === 'light' ? action.lightColor : action.color
+            )} />
+          </div>
           <span className={cn(
-            "relative font-medium transition-colors",
-            action.size === 'large' ? 'text-base' : 'text-sm',
+            "relative font-medium transition-colors text-sm",
             theme === 'light' ? "text-slate-700 group-hover:text-slate-900" : "text-foreground group-hover:text-foreground/90"
           )}>
             {action.title}

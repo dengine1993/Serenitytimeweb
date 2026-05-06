@@ -22,12 +22,12 @@ export function PlanCard({ plan, isCurrentPlan, onSelect, featured }: PlanCardPr
       className={cn(
         "relative rounded-2xl p-6 flex flex-col gap-4 transition-all duration-300",
         featured
-          ? "bg-gradient-to-br from-primary/20 to-secondary/20 border-2 border-primary/50 shadow-[0_20px_80px_rgba(155,135,245,0.3)] scale-105"
-          : "bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20"
+          ? "bg-gradient-to-br from-orange-500/22 via-rose-500/15 to-amber-400/18 border-2 border-orange-400/55 shadow-[0_20px_80px_-15px_rgba(249,115,22,0.45)] scale-105"
+          : "bg-white/5 backdrop-blur-xl border border-white/10 hover:border-orange-400/30"
       )}
     >
       {featured && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-sm font-medium">
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-medium border border-orange-300/40 shadow-[0_0_18px_rgba(249,115,22,0.5)]">
           {t(`billing.${plan.id}.badge`)}
         </div>
       )}
@@ -64,7 +64,7 @@ export function PlanCard({ plan, isCurrentPlan, onSelect, featured }: PlanCardPr
         className={cn(
           "w-full font-medium",
           featured
-            ? "bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-lg"
+            ? "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white border border-orange-300/30 shadow-[0_0_22px_rgba(249,115,22,0.45)]"
             : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
         )}
       >
@@ -79,7 +79,7 @@ function Feature({ text, muted }: { text: string; muted?: boolean }) {
     <div className="flex items-start gap-2">
       <Check className={cn(
         "w-5 h-5 flex-shrink-0 mt-0.5",
-        muted ? "text-white/65" : "text-primary"
+        muted ? "text-white/65" : "text-amber-300"
       )} />
       <span className={cn(
         "text-sm leading-relaxed",

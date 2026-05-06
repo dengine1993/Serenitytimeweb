@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Crown, Palette, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { JIVA_CHAT_LIMITS } from '@/config/jivaLimits';
+import { usePricing } from '@/hooks/usePricing';
 
 interface PremiumPaywallProps {
   open: boolean;
@@ -12,23 +14,24 @@ interface PremiumPaywallProps {
 
 const featureInfo = {
   'art-therapy': {
-    title: 'Арт-терапия',
-    description: 'Рисуй эмоции и получай анализ от AI',
+    title: 'Образ дня',
+    description: 'Нарисуй, как сейчас — Джива мягко отзовётся',
     icon: Palette,
   },
 };
 
-const premiumFeatures = [
-  '10 глубоких разборов с Мудрым наставником',
-  'Безлимитная поддержка 24/7',
-  'История души — память о твоих переживаниях',
-  'Арт-терапия — 5 анализов в день',
-];
-
 export function PremiumPaywall({ open, onOpenChange, feature }: PremiumPaywallProps) {
   const navigate = useNavigate();
+  const { premiumMonthly } = usePricing();
   const info = featureInfo[feature];
   const Icon = info.icon;
+
+  const premiumFeatures = [
+    `${JIVA_CHAT_LIMITS.premiumDailyLimit} глубоких разборов в день с Дживой`,
+    'Тёплая поддержка 24/7',
+    'История души — Джива помнит твои переживания',
+    '«Образ дня» — 3 рисунка в день с откликом Дживы',
+  ];
 
   const handleUpgrade = () => {
     onOpenChange(false);
@@ -50,11 +53,11 @@ export function PremiumPaywall({ open, onOpenChange, feature }: PremiumPaywallPr
           
           <DialogTitle className="text-xl font-bold flex items-center justify-center gap-2">
             <Crown className="w-5 h-5 text-amber-500" />
-            Функция тарифа «Опора»
+            Функция тарифа Premium
           </DialogTitle>
           
           <DialogDescription className="text-base text-foreground/80 pt-2">
-            <span className="font-medium text-primary">{info.title}</span> доступен в тарифе «Опора»
+            <span className="font-medium text-primary">{info.title}</span> доступен в тарифе Premium
           </DialogDescription>
         </DialogHeader>
 
@@ -73,13 +76,13 @@ export function PremiumPaywall({ open, onOpenChange, feature }: PremiumPaywallPr
             className="text-center py-2"
           >
             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              от 690 ₽
+              {premiumMonthly} ₽
             </span>
             <span className="text-sm text-muted-foreground">/мес</span>
           </motion.div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground/80">«Опора» включает:</p>
+            <p className="text-sm font-medium text-foreground/80">Premium включает:</p>
             <ul className="space-y-2">
               {premiumFeatures.map((feat, i) => (
                 <motion.li 
@@ -100,10 +103,10 @@ export function PremiumPaywall({ open, onOpenChange, feature }: PremiumPaywallPr
         <div className="flex flex-col gap-2 pt-2">
           <Button 
             onClick={handleUpgrade}
-            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white border border-orange-300/30 shadow-[0_0_22px_rgba(249,115,22,0.45)]"
           >
             <Crown className="w-4 h-4 mr-2" />
-            Обрести Опору
+            Перейти на Premium
           </Button>
           
           <Button 

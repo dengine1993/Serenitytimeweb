@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar as CalendarIcon, ArrowLeft, BarChart3, Sparkles, CheckCircle, Pencil, Brain, LifeBuoy, ArrowRight } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowLeft, BarChart3, Sparkles, CheckCircle, Pencil } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,17 +11,15 @@ import { ru, enUS } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/hooks/useI18n";
 import { useMoodEntries, type MoodType } from "@/hooks/useMoodEntries";
-import { useSMEREntries } from "@/hooks/useSMEREntries";
-import { useCrisisSessions } from "@/hooks/useCrisisSessions";
+
 import { EnhancedMoodSelector, getEnhancedMoodInfo } from "@/components/diary/EnhancedMoodSelector";
 import { EnhancedDiaryStats } from "@/components/diary/EnhancedDiaryStats";
 import { DiaryFormSkeleton, DiaryStatsSkeleton } from "@/components/diary/DiaryFormSkeleton";
 import { createMoodDayContent } from "@/components/diary/MoodDayContent";
-import { CrisisSessionCard } from "@/components/diary/CrisisSessionCard";
 import { DiaryParticles } from "@/components/diary/DiaryParticles";
 import { DiaryEmptyState } from "@/components/diary/DiaryEmptyState";
 import { StreakGraceMessage } from "@/components/diary/StreakGraceMessage";
-import { SMERPrompt, shouldTriggerSMER } from "@/components/diary/SMERPrompt";
+
 
 import { DiaryAnalyticsDrawer } from "@/components/diary/DiaryAnalyticsDrawer";
 import { ContextualNotePrompt, getContextualPlaceholder } from "@/components/diary/ContextualNotePrompt";
@@ -33,8 +31,7 @@ export default function Diary() {
   const { t, language } = useI18n();
   const { user } = useAuth();
   const { entries, loading, stats, saveEntry, getEntryForDate } = useMoodEntries();
-  const { entries: smerEntries, loading: smerLoading } = useSMEREntries();
-  const { sessions: crisisSessions, loading: crisisLoading } = useCrisisSessions();
+  
   
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
@@ -44,25 +41,14 @@ export default function Diary() {
   const [isEditing, setIsEditing] = useState(false);
   const [showJivaFeedback, setShowJivaFeedback] = useState(false);
   
-  // New state for SMER integration
-  const [showSMERPrompt, setShowSMERPrompt] = useState(false);
   const [showAnalyticsDrawer, setShowAnalyticsDrawer] = useState(false);
-  const [lastSavedMood, setLastSavedMood] = useState<MoodType | null>(null);
 
   const locale = language === 'ru' ? ru : enUS;
 
-  // Crisis date set for calendar overlay
-  const crisisDates = useMemo(() => {
-    return new Set(crisisSessions.map(s => s.created_at.slice(0, 10)));
-  }, [crisisSessions]);
-
-  // Recent SOS sessions
-  const recentCrisisSessions = useMemo(() => crisisSessions.slice(0, 3), [crisisSessions]);
-
-  // Create custom day content with mood colors + crisis overlay
+  // Create custom day content with mood colors
   const MoodDayContent = useMemo(
-    () => createMoodDayContent(entries, crisisDates),
-    [entries, crisisDates]
+    () => createMoodDayContent(entries, new Set<string>()),
+    [entries]
   );
 
   // Load existing entry when date changes
@@ -98,14 +84,9 @@ export default function Diary() {
 
     if (success) {
       setShowJivaFeedback(true);
-      setLastSavedMood(selectedMood);
       setIsEditing(false);
-      // Show SMER prompt for anxious moods after a short delay
       setTimeout(() => {
         setShowJivaFeedback(false);
-        if (shouldTriggerSMER(selectedMood)) {
-          setShowSMERPrompt(true);
-        }
       }, 2000);
     } else {
       toast.error(t('errors.generic'));
@@ -119,15 +100,6 @@ export default function Diary() {
   // Recent entries (last 5)
   const recentEntries = entries.slice(0, 5);
 
-  // SMER handlers
-  const handleAnalyzeSMER = () => {
-    setShowSMERPrompt(false);
-    navigate('/smer');
-  };
-
-  const handleDismissSMER = () => {
-    setShowSMERPrompt(false);
-  };
 
   return (
     <>
@@ -253,25 +225,6 @@ export default function Diary() {
                           {language === 'ru' ? 'Редактировать' : 'Edit'}
                         </Button>
 
-                        {/* SMER shortcut */}
-                        <button
-                          onClick={() => navigate('/smer')}
-                          className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-colors ${
-                            isLightTheme
-                              ? "bg-violet-50/80 border border-violet-200/60 hover:bg-violet-100/80"
-                              : "bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/15"
-                          }`}
-                        >
-                          <Brain className={`w-5 h-5 ${isLightTheme ? "text-violet-500" : "text-violet-400"}`} />
-                          <div className="text-left">
-                            <span className={`text-sm font-medium block ${isLightTheme ? "text-violet-700" : "text-violet-300"}`}>
-                              {language === 'ru' ? 'Дневник СМЭР' : 'SMER Diary'}
-                            </span>
-                            <span className={`text-xs ${isLightTheme ? "text-violet-500/70" : "text-violet-400/60"}`}>
-                              {language === 'ru' ? 'Разобрать ситуацию по шагам' : 'Break down a situation step by step'}
-                            </span>
-                          </div>
-                        </button>
                       </div>
                     ) : (
                       <>
@@ -418,41 +371,6 @@ export default function Diary() {
                     </motion.div>
                   )}
 
-                  {/* SOS moments section */}
-                  {recentCrisisSessions.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.25 }}
-                    >
-                      <Card className={`p-5 rounded-3xl ${
-                        isLightTheme
-                          ? "bg-white/80 border-orange-100/60 shadow-lg backdrop-blur-sm"
-                          : "bg-white/5 border-white/10 backdrop-blur-sm"
-                      }`}>
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className={`text-base font-bold flex items-center gap-2 ${isLightTheme ? "text-gray-900" : "text-white"}`}>
-                            <LifeBuoy className="w-4 h-4 text-orange-400" />
-                            {language === 'ru' ? 'SOS-моменты' : 'SOS moments'}
-                          </h3>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate('/diary/sos')}
-                            className={`gap-1 text-xs ${isLightTheme ? "text-gray-500" : "text-white/60 hover:text-white"}`}
-                          >
-                            {language === 'ru' ? 'Все' : 'All'}
-                            <ArrowRight className="w-3 h-3" />
-                          </Button>
-                        </div>
-                        <div className="space-y-2">
-                          {recentCrisisSessions.map((session) => (
-                            <CrisisSessionCard key={session.id} session={session} isLight={isLightTheme} />
-                          ))}
-                        </div>
-                      </Card>
-                    </motion.div>
-                  )}
                 </>
               )}
             </div>
@@ -615,28 +533,12 @@ export default function Diary() {
           )}
         </AnimatePresence>
 
-        {/* SMER Prompt - shown after saving anxious mood */}
-        <AnimatePresence>
-          {showSMERPrompt && (
-            <SMERPrompt
-              onAnalyze={handleAnalyzeSMER}
-              onDismiss={handleDismissSMER}
-              mood={lastSavedMood || undefined}
-            />
-          )}
-        </AnimatePresence>
-
         {/* Analytics Drawer */}
         <DiaryAnalyticsDrawer
           open={showAnalyticsDrawer}
           onOpenChange={setShowAnalyticsDrawer}
           entries={entries}
-          smerEntries={smerEntries}
           stats={stats}
-          onOpenSMERWizard={() => {
-            setShowAnalyticsDrawer(false);
-            navigate('/smer');
-          }}
         />
       </div>
     </>

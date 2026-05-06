@@ -49,19 +49,28 @@ export const useI18n = () => {
 
   const t = (key: string, paramsOrFallback?: Record<string, unknown> | string): string => {
     const keys = key.split('.');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let value: any = translations[currentLanguage];
 
-    for (const k of keys) {
-      if (value && typeof value === 'object' && k in value) {
-        value = value[k];
-      } else {
-        // Return fallback if provided as string, otherwise return key
-        return typeof paramsOrFallback === 'string' ? paramsOrFallback : key;
+    const resolve = (lang: Language): string | undefined => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let value: any = translations[lang];
+      for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+          value = value[k];
+        } else {
+          return undefined;
+        }
       }
-    }
+      return typeof value === 'string' ? value : undefined;
+    };
 
-    if (typeof value !== 'string') {
+    // Try current language, then the other language as a soft fallback,
+    // then the explicit string fallback, then return the key itself.
+    let value = resolve(currentLanguage);
+    if (value === undefined) {
+      const other: Language = currentLanguage === 'ru' ? 'en' : 'ru';
+      value = resolve(other);
+    }
+    if (value === undefined) {
       return typeof paramsOrFallback === 'string' ? paramsOrFallback : key;
     }
 
@@ -69,7 +78,7 @@ export const useI18n = () => {
     if (paramsOrFallback && typeof paramsOrFallback === 'object') {
       return Object.entries(paramsOrFallback).reduce(
         (str, [param, val]) => str.replace(new RegExp(`{{${param}}}`, 'g'), String(val)),
-        value
+        value as string,
       );
     }
 
@@ -78,22 +87,23 @@ export const useI18n = () => {
 
   const tArray = (key: string): string[] => {
     const keys = key.split('.');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let value: any = translations[currentLanguage];
 
-    for (const k of keys) {
-      if (value && typeof value === 'object' && k in value) {
-        value = value[k];
-      } else {
-        return []; // Return empty array if translation not found
+    const resolve = (lang: Language): string[] | undefined => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let value: any = translations[lang];
+      for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+          value = value[k];
+        } else {
+          return undefined;
+        }
       }
-    }
+      return Array.isArray(value) ? value : undefined;
+    };
 
-    if (Array.isArray(value)) {
-      return value;
-    }
-
-    return [];
+    return resolve(currentLanguage)
+      ?? resolve(currentLanguage === 'ru' ? 'en' : 'ru')
+      ?? [];
   };
 
   const translateText = (ruText: string, enText: string) =>

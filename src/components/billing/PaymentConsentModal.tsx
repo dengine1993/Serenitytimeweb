@@ -26,7 +26,8 @@ export function PaymentConsentModal({
 }: PaymentConsentModalProps) {
   const [consents, setConsents] = useState({
     offer: false,
-    privacy: false
+    privacy: false,
+    disclaimer: false,
   });
   const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -82,7 +83,7 @@ export function PaymentConsentModal({
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       // Reset state when closing
-      setConsents({ offer: false, privacy: false });
+      setConsents({ offer: false, privacy: false, disclaimer: false });
       setError(false);
       onClose();
     }
@@ -111,7 +112,8 @@ export function PaymentConsentModal({
             consents={consents}
             onChange={(newConsents) => setConsents({
               offer: newConsents.offer ?? false,
-              privacy: newConsents.privacy ?? false
+              privacy: newConsents.privacy ?? false,
+              disclaimer: newConsents.disclaimer ?? false,
             })}
             error={error}
           />

@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils';
-import logoBezm from '@/assets/logo-bezm.png';
 
 interface CEOAvatarProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  /** Реальный аватар CEO (Lekha) из профиля. Если не задан — фолбэк на лого приложения. */
+  avatarUrl?: string;
 }
 
 const sizeMap = {
@@ -13,10 +14,11 @@ const sizeMap = {
 };
 
 /**
- * Аватар основателя/CEO — логотип «Безмятежные»
- * с круглой обводкой градиентом primary→secondary.
+ * Аватар основателя/CEO (Lekha) в фирменном градиентном кольце.
+ * Внутри показывает реальную аватарку из профиля, а если её нет — лого приложения.
  */
-export function CEOAvatar({ size = 'md', className }: CEOAvatarProps) {
+export function CEOAvatar({ size = 'md', className, avatarUrl }: CEOAvatarProps) {
+  const src = avatarUrl && avatarUrl.trim().length > 0 ? avatarUrl : '/icon-192.png';
   return (
     <div
       className={cn(
@@ -25,14 +27,12 @@ export function CEOAvatar({ size = 'md', className }: CEOAvatarProps) {
         className
       )}
     >
-      <div className="w-full h-full rounded-full bg-background flex items-center justify-center overflow-hidden">
-        <img
-          src={logoBezm}
-          alt="Безмятежные"
-          className="w-[80%] h-[80%] object-contain"
-          draggable={false}
-        />
-      </div>
+      <img
+        src={src}
+        alt="Lekha"
+        loading="lazy"
+        className="w-full h-full rounded-full object-cover bg-background"
+      />
     </div>
   );
 }

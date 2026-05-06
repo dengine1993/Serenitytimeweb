@@ -1,16 +1,16 @@
 import { 
   FileText, ScrollText, RefreshCcw, AlertTriangle, User,
-  Settings, ChevronRight, Crown, Shield, BookText, Palette, Compass, Info,
-  Users, Heart
+  Settings, ChevronRight, Crown, Shield, BookText, Palette, Info,
+  Users
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useLegalModal, type LegalDocType } from "@/components/legal/LegalModalProvider";
 
 interface MoreDrawerProps {
   open: boolean;
@@ -22,6 +22,7 @@ interface MenuItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
+  legalType?: LegalDocType;
 }
 
 interface MenuSection {
@@ -40,10 +41,8 @@ const menuSections: MenuSection[] = [
     title: "Функции",
     items: [
       { title: "Дневник", href: "/diary", icon: BookText, description: "Записывайте мысли и чувства" },
-      { title: "Арт-терапия", href: "/art-therapy", icon: Palette, description: "Рисуйте и анализируйте эмоции" },
-      { title: "Навигатор", href: "/navigator", icon: Compass, description: "Пошаговая помощь при тревоге" },
+      { title: "Образ дня", href: "/art-therapy", icon: Palette, description: "Нарисуй, как сейчас — Джива отзовётся" },
       { title: "Сообщество", href: "/community", icon: Users, description: "Люди, которые понимают" },
-      { title: "Срочная помощь", href: "/crisis", icon: Heart, description: "Дыхание и заземление" },
     ]
   },
   {
@@ -55,38 +54,46 @@ const menuSections: MenuSection[] = [
   {
     title: "Документы",
     items: [
-      { title: "Политика конфиденциальности", href: "/privacy", icon: FileText, description: "Обработка персональных данных" },
-      { title: "Публичная оферта", href: "/offer", icon: ScrollText, description: "Договор оказания услуг" },
-      { title: "Условия возврата", href: "/refund", icon: RefreshCcw, description: "Правила возврата средств" },
-      { title: "Отказ от ответственности", href: "/disclaimer", icon: AlertTriangle, description: "Важные предупреждения" },
-      { title: "Информация о продавце", href: "/seller", icon: User, description: "Контактные данные" },
+      { title: "Политика конфиденциальности", href: "/privacy", icon: FileText, description: "Обработка персональных данных", legalType: "privacy" },
+      { title: "Публичная оферта", href: "/offer", icon: ScrollText, description: "Договор оказания услуг", legalType: "offer" },
+      { title: "Условия возврата", href: "/refund", icon: RefreshCcw, description: "Правила возврата средств", legalType: "refund" },
+      { title: "Условия использования сервиса", href: "/disclaimer", icon: AlertTriangle, description: "Информация о характере услуг и ограничениях ИИ", legalType: "disclaimer" },
+      { title: "Информация о продавце", href: "/seller", icon: User, description: "Контактные данные", legalType: "seller" },
     ]
   }
 ];
 
-// Calculate global index for stagger animation
-const getGlobalIndex = (sectionIndex: number, itemIndex: number): number => {
-  let globalIndex = 0;
-  for (let i = 0; i < sectionIndex; i++) {
-    globalIndex += menuSections[i].items.length;
-  }
-  return globalIndex + itemIndex;
-};
-
 export function MoreDrawer({ open, onOpenChange }: MoreDrawerProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const { isPremium } = useFeatureAccess();
+  const { openLegal } = useLegalModal();
 
   const handleNavigate = (item: MenuItem) => {
+    if (item.legalType) {
+      // Закрываем drawer, открываем документ. После закрытия документа — снова открываем drawer.
+      onOpenChange(false);
+      // Небольшая задержка чтобы Sheet успел корректно отдать фокус и снять focus-trap
+      window.setTimeout(() => {
+        openLegal(item.legalType!, {
+          onAllClosed: () => onOpenChange(true),
+        });
+      }, 50);
+      return;
+    }
     navigate(item.href);
     onOpenChange(false);
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl border-t border-border/40 backdrop-blur-2xl bg-background/95">
+      <SheetContent
+        side="bottom"
+        className={cn(
+          "h-[85vh] rounded-t-3xl border-t border-border/40 backdrop-blur-2xl bg-background/95"
+        )}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <SheetHeader className="pb-4">
           <SheetTitle className="text-2xl font-bold flex items-center gap-2">
             Меню
@@ -98,122 +105,77 @@ export function MoreDrawer({ open, onOpenChange }: MoreDrawerProps) {
             )}
           </SheetTitle>
         </SheetHeader>
-        
+
         <ScrollArea className="h-[calc(85vh-120px)]">
-          <AnimatePresence>
-            {open && (
-              <motion.div 
-                className="space-y-6 pb-6"
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-              >
-                {/* User Profile Section */}
-                {user && (
-                  <motion.div 
-                    className="flex items-center gap-4 p-4 rounded-2xl bg-accent/30 border border-border/20"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <User className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground">{user.email?.split('@')[0]}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        navigate('/admin');
-                        onOpenChange(false);
-                      }}
-                      className="p-2 rounded-xl hover:bg-accent/50 transition-colors"
-                    >
-                      <Shield className="w-5 h-5 text-muted-foreground" />
-                    </button>
-                  </motion.div>
-                )}
-
-                {/* Menu Sections */}
-                {menuSections.map((section, sectionIndex) => (
-                  <motion.div 
-                    key={section.title}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1 + sectionIndex * 0.05, duration: 0.3 }}
-                  >
-                    <motion.h3 
-                      className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + sectionIndex * 0.05, duration: 0.3 }}
-                    >
-                      {section.title}
-                    </motion.h3>
-                    <div className="space-y-1">
-                      {section.items.map((item, itemIndex) => {
-                        const Icon = item.icon;
-                        const isActive = location.pathname === item.href;
-                        const globalIndex = getGlobalIndex(sectionIndex, itemIndex);
-                        
-                        return (
-                          <motion.button
-                            key={item.href}
-                            onClick={() => handleNavigate(item)}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ 
-                              delay: 0.1 + globalIndex * 0.03, 
-                              duration: 0.3,
-                              ease: "easeOut"
-                            }}
-                            whileHover={{ scale: 1.01, x: 4 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={cn(
-                              "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300",
-                              isActive 
-                                ? "bg-primary/15 border border-primary/30" 
-                                : "hover:bg-accent/50"
-                            )}
-                          >
-                            <div className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                              isActive ? "bg-primary/20" : "bg-accent/30"
-                            )}>
-                              <Icon className={cn(
-                                "w-5 h-5",
-                                isActive ? "text-primary" : "text-muted-foreground"
-                              )} />
-                            </div>
-                            <div className="flex-1 text-left">
-                              <p className={cn(
-                                "font-semibold text-sm",
-                                isActive ? "text-primary" : "text-foreground"
-                              )}>
-                                {item.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.description}
-                              </p>
-                            </div>
-                            <ChevronRight className={cn(
-                              "w-4 h-4",
-                              isActive ? "text-primary" : "text-muted-foreground"
-                            )} />
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                    {sectionIndex < menuSections.length - 1 && (
-                      <Separator className="my-4 opacity-50" />
-                    )}
-                  </motion.div>
-                ))}
-
-              </motion.div>
+          <div className="space-y-6 pb-6">
+            {/* User Profile Section */}
+            {user && (
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-accent/30 border border-border/20">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                  <User className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">{user.email?.split('@')[0]}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    navigate('/admin');
+                    onOpenChange(false);
+                  }}
+                  className="p-2 rounded-xl hover:bg-accent/50 transition-colors"
+                  aria-label="Админ"
+                >
+                  <Shield className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
             )}
-          </AnimatePresence>
+
+            {/* Menu Sections */}
+            {menuSections.map((section, sectionIndex) => (
+              <div key={section.title}>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">
+                  {section.title}
+                </h3>
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <button
+                        key={item.href}
+                        onClick={(e) => {
+                          (e.currentTarget as HTMLElement).blur();
+                          handleNavigate(item);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-4 p-4 rounded-2xl transition-colors duration-200",
+                          "active:bg-accent/60 active:scale-[0.98]",
+                          "focus:outline-none focus-visible:outline-none"
+                        )}
+                      >
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent/30">
+                          <Icon className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="font-semibold text-sm text-foreground">
+                            {item.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.description}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    );
+                  })}
+                </div>
+                {sectionIndex < menuSections.length - 1 && (
+                  <Separator className="my-4 opacity-50" />
+                )}
+              </div>
+            ))}
+          </div>
         </ScrollArea>
       </SheetContent>
     </Sheet>

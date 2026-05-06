@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStories } from '@/hooks/useStories';
+import { useStories, STORY_MIN_LENGTH } from '@/hooks/useStories';
 import { useI18n } from '@/hooks/useI18n';
 import {
   Dialog,
@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Loader2, PenLine } from 'lucide-react';
 
@@ -23,29 +22,31 @@ interface CreateStoryModalProps {
 export function CreateStoryModal({ open, onOpenChange, onCreated }: CreateStoryModalProps) {
   const { t } = useI18n();
   const { createStory } = useStories({ sortBy: 'newest' });
-  
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const contentLength = content.trim().length;
-  const isValid = contentLength >= 100;
+  const isValid = contentLength >= STORY_MIN_LENGTH;
 
   const handleSubmit = async () => {
     if (!isValid || isSubmitting) return;
 
     setIsSubmitting(true);
-    const result = await createStory(content, title || undefined, isAnonymous);
+    const result = await createStory(content, title || undefined);
     setIsSubmitting(false);
 
     if (result.error) {
-      if (result.error.includes('one story per day')) {
+      const err = result.error;
+      if (err === 'rate_limit') {
         toast.error(t('stories.rateLimitError'));
-      } else if (result.error.includes('100 characters')) {
+      } else if (err.startsWith('min_length:')) {
         toast.error(t('stories.minLengthError'));
+      } else if (err === 'too_long') {
+        toast.error(t('stories.tooLongError'));
       } else {
-        toast.error(result.error);
+        toast.error(err);
       }
       return;
     }
@@ -53,7 +54,6 @@ export function CreateStoryModal({ open, onOpenChange, onCreated }: CreateStoryM
     toast.success(t('stories.storyPublished'));
     setTitle('');
     setContent('');
-    setIsAnonymous(false);
     onCreated();
   };
 
@@ -74,7 +74,6 @@ export function CreateStoryModal({ open, onOpenChange, onCreated }: CreateStoryM
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Title (optional) */}
           <div>
             <Input
               placeholder={t('stories.titlePlaceholder')}
@@ -85,7 +84,6 @@ export function CreateStoryModal({ open, onOpenChange, onCreated }: CreateStoryM
             />
           </div>
 
-          {/* Content */}
           <div>
             <Textarea
               placeholder={t('stories.contentPlaceholder')}
@@ -95,34 +93,23 @@ export function CreateStoryModal({ open, onOpenChange, onCreated }: CreateStoryM
               disabled={isSubmitting}
             />
             <div className="flex items-center justify-between mt-2">
-              <p className={`text-xs ${contentLength < 100 ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                {contentLength < 100 
-                  ? t('stories.minCharsRemaining', { count: 100 - contentLength })
+              <p className={`text-xs ${contentLength < STORY_MIN_LENGTH ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                {contentLength < STORY_MIN_LENGTH
+                  ? t('stories.minCharsRemaining', { count: STORY_MIN_LENGTH - contentLength })
                   : t('stories.charsCount', { count: contentLength })
                 }
               </p>
-              {contentLength < 100 && (
+              {contentLength < STORY_MIN_LENGTH && (
                 <p className="text-xs text-muted-foreground">
                   {t('stories.minLengthHint')}
                 </p>
               )}
             </div>
+            <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground/90 italic">
+              {t('stories.createHint')}
+            </p>
           </div>
 
-          {/* Anonymous checkbox */}
-          <label className="flex items-center gap-3 cursor-pointer">
-            <Checkbox
-              checked={isAnonymous}
-              onCheckedChange={(checked) => setIsAnonymous(checked === true)}
-              disabled={isSubmitting}
-            />
-            <div>
-              <p className="text-sm font-medium">{t('stories.anonymousLabel')}</p>
-              <p className="text-xs text-muted-foreground">{t('stories.anonymousHint')}</p>
-            </div>
-          </label>
-
-          {/* Submit button */}
           <div className="flex gap-3 pt-2">
             <Button
               variant="outline"

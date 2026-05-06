@@ -78,7 +78,7 @@ const TABLE_GROUPS: { label: string; tables: { name: string; label: string }[] }
     label: "Дневник / Кризис",
     tables: [
       { name: "mood_entries", label: "Записи настроения" },
-      { name: "smer_entries", label: "СМЭР" },
+      
       { name: "emotion_calendar", label: "Календарь эмоций" },
       { name: "daily_checkins", label: "Чекины" },
       { name: "crisis_sessions", label: "Кризисные сессии" },

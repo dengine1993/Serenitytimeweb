@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface Profile {
   user_id: string;
@@ -19,6 +20,7 @@ interface MentionSuggestionsProps {
 const EMOJI_AVATARS = ['🌿', '🌸', '🌊', '🌻', '🍀', '🦋', '🌈', '✨', '🌙', '☀️'];
 
 export function MentionSuggestions({ suggestions, isLoading, isOpen, onSelect, onClose }: MentionSuggestionsProps) {
+  const { t } = useI18n();
   if (!isOpen) return null;
 
   return (
@@ -35,12 +37,12 @@ export function MentionSuggestions({ suggestions, isLoading, isOpen, onSelect, o
           </div>
         ) : suggestions.length === 0 ? (
           <div className="p-3 text-sm text-muted-foreground text-center">
-            Никого не найдено
+            {t('community.mentions.noResults')}
           </div>
         ) : (
           <div className="max-h-48 overflow-y-auto">
             {suggestions.map((profile, index) => {
-              const displayName = profile.display_name || profile.username || 'Аноним';
+              const displayName = profile.display_name || profile.username || t('community.mentions.anonymous');
               const emojiIndex = profile.user_id.charCodeAt(0) % EMOJI_AVATARS.length;
               
               return (

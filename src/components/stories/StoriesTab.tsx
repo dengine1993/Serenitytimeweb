@@ -4,33 +4,42 @@ import { useStories, StorySortBy } from '@/hooks/useStories';
 import { StoryCard } from './StoryCard';
 import { StoryScreen } from './StoryScreen';
 import { CreateStoryModal } from './CreateStoryModal';
+import { SunriseIntroModal } from './SunriseIntroModal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/hooks/useI18n';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  Search, 
-  PenLine, 
-  MessageSquareText, 
-  Sparkles, 
+import {
+  Search,
+  PenLine,
+  MessageSquareText,
+  Clock,
   User,
   Loader2,
-  BookOpen
+  Sunrise
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-export function StoriesTab() {
+interface StoriesTabProps {
+  initialSortBy?: StorySortBy;
+  initialOpenStoryId?: string;
+  initialOpenCreate?: boolean;
+}
+
+export function StoriesTab({ initialSortBy, initialOpenStoryId, initialOpenCreate }: StoriesTabProps = {}) {
   const { t } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [sortBy, setSortBy] = useState<StorySortBy>('comments');
+  const [sortBy, setSortBy] = useState<StorySortBy>(initialSortBy ?? 'comments');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStory, setSelectedStory] = useState<{ id: string; data?: any } | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedStory, setSelectedStory] = useState<{ id: string; data?: any } | null>(
+    initialOpenStoryId ? { id: initialOpenStoryId } : null
+  );
+  const [showCreateModal, setShowCreateModal] = useState(!!initialOpenCreate);
   
   const { 
     stories, 
@@ -69,8 +78,15 @@ export function StoriesTab() {
         </div>
       ) : (
         <div className="flex flex-col h-full">
-      {/* Header with search and sorting */}
+      {/* Header with subtitle, search and sorting */}
       <div className="p-4 space-y-3 bg-background/50 backdrop-blur-sm border-b border-border/30">
+        {/* Subtitle / mission */}
+        <div className="flex items-start gap-2.5 px-0.5">
+          <Sunrise className="h-4 w-4 mt-0.5 text-amber-400 shrink-0" />
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            {t('stories.feedSubtitle')}
+          </p>
+        </div>
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -94,7 +110,7 @@ export function StoriesTab() {
           <SortButton
             active={sortBy === 'newest'}
             onClick={() => setSortBy('newest')}
-            icon={<Sparkles className="h-3.5 w-3.5" />}
+            icon={<Clock className="h-3.5 w-3.5" />}
           >
             {t('stories.sortByNewest')}
           </SortButton>
@@ -112,7 +128,7 @@ export function StoriesTab() {
 
       {/* Stories list */}
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-3 pb-32">
+        <div className="p-4 space-y-3 pb-40">
           {isLoading ? (
             // Loading skeleton
             Array.from({ length: 4 }).map((_, i) => (
@@ -132,20 +148,48 @@ export function StoriesTab() {
               </div>
             ))
           ) : stories.length === 0 ? (
-            // Empty state
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <BookOpen className="h-8 w-8 text-primary" />
+            searchQuery.trim() ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-muted/40 flex items-center justify-center mb-4">
+                  <Search className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">{t('stories.noResults')}</h3>
+                <p className="text-muted-foreground text-sm mb-6 max-w-xs">
+                  {t('stories.noResultsDesc', { query: searchQuery })}
+                </p>
+                <Button variant="outline" onClick={() => setSearchQuery('')}>
+                  {t('stories.clearSearch')}
+                </Button>
               </div>
-              <h3 className="text-lg font-medium mb-2">{t('stories.emptyState')}</h3>
-              <p className="text-muted-foreground text-sm mb-6 max-w-xs">
-                {t('stories.emptyStateDesc')}
-              </p>
-              <Button onClick={handleCreateClick} className="gap-2">
-                <PenLine className="h-4 w-4" />
-                {t('stories.createButton')}
-              </Button>
-            </div>
+            ) : sortBy === 'mine' ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-amber-500/15 flex items-center justify-center mb-4">
+                  <Sunrise className="h-8 w-8 text-amber-400" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">{t('stories.emptyMine')}</h3>
+                <p className="text-muted-foreground text-sm mb-6 max-w-xs">
+                  {t('stories.emptyMineDesc')}
+                </p>
+                <Button onClick={handleCreateClick} className="gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white border-0 hover:opacity-95">
+                  <PenLine className="h-4 w-4" />
+                  {t('stories.createFirstButton')}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-amber-500/15 flex items-center justify-center mb-4">
+                  <Sunrise className="h-8 w-8 text-amber-400" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">{t('stories.emptyState')}</h3>
+                <p className="text-muted-foreground text-sm mb-6 max-w-xs">
+                  {t('stories.emptyStateDesc')}
+                </p>
+                <Button onClick={handleCreateClick} className="gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white border-0 hover:opacity-95">
+                  <PenLine className="h-4 w-4" />
+                  {t('stories.emptyStateCta')}
+                </Button>
+              </div>
+            )
           ) : (
             <>
               <>
@@ -199,6 +243,9 @@ export function StoriesTab() {
         onOpenChange={setShowCreateModal}
         onCreated={handleStoryCreated}
       />
+
+      {/* First-visit intro */}
+      <SunriseIntroModal />
         </div>
       )}
     </>

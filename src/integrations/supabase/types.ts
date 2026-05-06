@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_broadcasts: {
+        Row: {
+          audience: string
+          audience_user_ids: string[] | null
+          body: string
+          created_at: string
+          created_by: string
+          failed_count: number
+          id: string
+          sent_count: number
+          title: string
+          urgent: boolean
+          url: string | null
+        }
+        Insert: {
+          audience: string
+          audience_user_ids?: string[] | null
+          body: string
+          created_at?: string
+          created_by: string
+          failed_count?: number
+          id?: string
+          sent_count?: number
+          title: string
+          urgent?: boolean
+          url?: string | null
+        }
+        Update: {
+          audience?: string
+          audience_user_ids?: string[] | null
+          body?: string
+          created_at?: string
+          created_by?: string
+          failed_count?: number
+          id?: string
+          sent_count?: number
+          title?: string
+          urgent?: boolean
+          url?: string | null
+        }
+        Relationships: []
+      }
       admin_logs: {
         Row: {
           action: string
@@ -72,6 +114,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          summary: string | null
+          summary_message_count: number
+          summary_updated_at: string | null
           title: string | null
           updated_at: string
           user_id: string
@@ -79,6 +124,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          summary?: string | null
+          summary_message_count?: number
+          summary_updated_at?: string | null
           title?: string | null
           updated_at?: string
           user_id: string
@@ -86,6 +134,9 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          summary?: string | null
+          summary_message_count?: number
+          summary_updated_at?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
@@ -98,6 +149,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          metadata: Json | null
           role: string
           user_id: string
         }
@@ -106,6 +158,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           role: string
           user_id: string
         }
@@ -114,6 +167,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           role?: string
           user_id?: string
         }
@@ -213,44 +267,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      comment_reports: {
-        Row: {
-          comment_id: string
-          created_at: string
-          details: string | null
-          id: string
-          reason: string
-          reporter_id: string
-          status: string
-        }
-        Insert: {
-          comment_id: string
-          created_at?: string
-          details?: string | null
-          id?: string
-          reason: string
-          reporter_id: string
-          status?: string
-        }
-        Update: {
-          comment_id?: string
-          created_at?: string
-          details?: string | null
-          id?: string
-          reason?: string
-          reporter_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comment_reports_comment_id_fkey"
-            columns: ["comment_id"]
-            isOneToOne: false
-            referencedRelation: "post_comments"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       community_messages: {
         Row: {
@@ -407,6 +423,66 @@ export type Database = {
         }
         Relationships: []
       }
+      data_deletion_log: {
+        Row: {
+          deleted_at: string
+          email_hash: string
+          id: string
+          reason: string
+          user_id_hash: string
+        }
+        Insert: {
+          deleted_at?: string
+          email_hash: string
+          id?: string
+          reason?: string
+          user_id_hash: string
+        }
+        Update: {
+          deleted_at?: string
+          email_hash?: string
+          id?: string
+          reason?: string
+          user_id_hash?: string
+        }
+        Relationships: []
+      }
+      device_push_tokens: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          device_id: string | null
+          id: string
+          last_seen_at: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          last_seen_at?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          last_seen_at?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       emotion_calendar: {
         Row: {
           created_at: string
@@ -545,6 +621,42 @@ export type Database = {
           model?: string
           prompt_tokens?: number
           provider?: string
+        }
+        Relationships: []
+      }
+      jiva_ingest_queue: {
+        Row: {
+          content: string
+          created_at: string
+          error: string | null
+          id: string
+          processed_at: string | null
+          source_id: string | null
+          source_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          processed_at?: string | null
+          source_id?: string | null
+          source_type: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          processed_at?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -699,44 +811,6 @@ export type Database = {
           },
         ]
       }
-      message_reports: {
-        Row: {
-          created_at: string
-          details: string | null
-          id: string
-          message_id: string
-          reason: string
-          reporter_id: string
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          details?: string | null
-          id?: string
-          message_id: string
-          reason: string
-          reporter_id: string
-          status?: string
-        }
-        Update: {
-          created_at?: string
-          details?: string | null
-          id?: string
-          message_id?: string
-          reason?: string
-          reporter_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "message_reports_message_id_fkey"
-            columns: ["message_id"]
-            isOneToOne: false
-            referencedRelation: "community_messages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       moderation_history: {
         Row: {
           action_type: string
@@ -812,6 +886,7 @@ export type Database = {
           created_at: string | null
           email_weekly_digest: boolean | null
           id: string
+          push_admin: boolean
           push_comments: boolean | null
           push_friend_requests: boolean | null
           push_mentions: boolean | null
@@ -830,6 +905,7 @@ export type Database = {
           created_at?: string | null
           email_weekly_digest?: boolean | null
           id?: string
+          push_admin?: boolean
           push_comments?: boolean | null
           push_friend_requests?: boolean | null
           push_mentions?: boolean | null
@@ -848,6 +924,7 @@ export type Database = {
           created_at?: string | null
           email_weekly_digest?: boolean | null
           id?: string
+          push_admin?: boolean
           push_comments?: boolean | null
           push_friend_requests?: boolean | null
           push_mentions?: boolean | null
@@ -925,6 +1002,7 @@ export type Database = {
           currency: string | null
           external_id: string | null
           id: string
+          is_recurrent: boolean
           meta: Json | null
           product_type: string | null
           provider: string | null
@@ -942,6 +1020,7 @@ export type Database = {
           currency?: string | null
           external_id?: string | null
           id?: string
+          is_recurrent?: boolean
           meta?: Json | null
           product_type?: string | null
           provider?: string | null
@@ -959,6 +1038,7 @@ export type Database = {
           currency?: string | null
           external_id?: string | null
           id?: string
+          is_recurrent?: boolean
           meta?: Json | null
           product_type?: string | null
           provider?: string | null
@@ -967,6 +1047,36 @@ export type Database = {
           user_id?: string
           yookassa_confirmation_url?: string | null
           yookassa_payment_id?: string | null
+        }
+        Relationships: []
+      }
+      pdn_audit_log: {
+        Row: {
+          created_at: string
+          event_data: Json
+          event_type: string
+          id: string
+          ip_hash: string | null
+          user_agent_hash: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json
+          event_type: string
+          id?: string
+          ip_hash?: string | null
+          user_agent_hash?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json
+          event_type?: string
+          id?: string
+          ip_hash?: string | null
+          user_agent_hash?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1032,6 +1142,7 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          edited_at: string | null
           id: string
           is_jiva: boolean
           parent_id: string | null
@@ -1041,6 +1152,7 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           is_jiva?: boolean
           parent_id?: string | null
@@ -1050,6 +1162,7 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           is_jiva?: boolean
           parent_id?: string | null
@@ -1105,44 +1218,6 @@ export type Database = {
           },
         ]
       }
-      post_reports: {
-        Row: {
-          created_at: string
-          details: string | null
-          id: string
-          post_id: string
-          reason: string
-          reporter_id: string
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          details?: string | null
-          id?: string
-          post_id: string
-          reason: string
-          reporter_id: string
-          status?: string
-        }
-        Update: {
-          created_at?: string
-          details?: string | null
-          id?: string
-          post_id?: string
-          reason?: string
-          reporter_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_reports_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       posts: {
         Row: {
           content: string
@@ -1150,7 +1225,6 @@ export type Database = {
           emotion: string | null
           emotion_wave: string | null
           id: string
-          is_anonymous: boolean | null
           moderation_status: string | null
           updated_at: string
           user_id: string
@@ -1161,7 +1235,6 @@ export type Database = {
           emotion?: string | null
           emotion_wave?: string | null
           id?: string
-          is_anonymous?: boolean | null
           moderation_status?: string | null
           updated_at?: string
           user_id: string
@@ -1172,7 +1245,6 @@ export type Database = {
           emotion?: string | null
           emotion_wave?: string | null
           id?: string
-          is_anonymous?: boolean | null
           moderation_status?: string | null
           updated_at?: string
           user_id?: string
@@ -1238,6 +1310,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          edited_at: string | null
           id: string
           media_type: string | null
           media_url: string | null
@@ -1248,6 +1321,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           media_type?: string | null
           media_url?: string | null
@@ -1258,6 +1332,7 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           media_type?: string | null
           media_url?: string | null
@@ -1277,6 +1352,7 @@ export type Database = {
       profiles: {
         Row: {
           abuse_warnings_count: number | null
+          age_confirmed_at: string | null
           ai_memory_enabled: boolean
           allow_friend_requests: string
           allow_private_messages: string | null
@@ -1291,6 +1367,7 @@ export type Database = {
           country: string | null
           created_at: string
           creator_letter_shown: boolean | null
+          device_id: string | null
           disclaimer_accepted_at: string | null
           disclaimer_version: string | null
           display_name: string | null
@@ -1304,8 +1381,7 @@ export type Database = {
           last_daily_reset: string | null
           last_diary_pdf_export_at: string | null
           last_diary_pdf_export_url: string | null
-          last_smer_pdf_export_at: string | null
-          last_smer_pdf_export_url: string | null
+          name_to_jiva_consent_at: string | null
           offer_accepted_at: string | null
           offer_version: string | null
           onboarding_completed: boolean | null
@@ -1316,6 +1392,8 @@ export type Database = {
           privacy_version: string | null
           role: string | null
           soft_banned_features: string[] | null
+          special_category_consent_at: string | null
+          special_category_consent_withdrawn_at: string | null
           temp_bans_count: number | null
           timezone: string | null
           trial_ended_at: string | null
@@ -1328,6 +1406,7 @@ export type Database = {
         }
         Insert: {
           abuse_warnings_count?: number | null
+          age_confirmed_at?: string | null
           ai_memory_enabled?: boolean
           allow_friend_requests?: string
           allow_private_messages?: string | null
@@ -1342,6 +1421,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           creator_letter_shown?: boolean | null
+          device_id?: string | null
           disclaimer_accepted_at?: string | null
           disclaimer_version?: string | null
           display_name?: string | null
@@ -1355,8 +1435,7 @@ export type Database = {
           last_daily_reset?: string | null
           last_diary_pdf_export_at?: string | null
           last_diary_pdf_export_url?: string | null
-          last_smer_pdf_export_at?: string | null
-          last_smer_pdf_export_url?: string | null
+          name_to_jiva_consent_at?: string | null
           offer_accepted_at?: string | null
           offer_version?: string | null
           onboarding_completed?: boolean | null
@@ -1367,6 +1446,8 @@ export type Database = {
           privacy_version?: string | null
           role?: string | null
           soft_banned_features?: string[] | null
+          special_category_consent_at?: string | null
+          special_category_consent_withdrawn_at?: string | null
           temp_bans_count?: number | null
           timezone?: string | null
           trial_ended_at?: string | null
@@ -1379,6 +1460,7 @@ export type Database = {
         }
         Update: {
           abuse_warnings_count?: number | null
+          age_confirmed_at?: string | null
           ai_memory_enabled?: boolean
           allow_friend_requests?: string
           allow_private_messages?: string | null
@@ -1393,6 +1475,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           creator_letter_shown?: boolean | null
+          device_id?: string | null
           disclaimer_accepted_at?: string | null
           disclaimer_version?: string | null
           display_name?: string | null
@@ -1406,8 +1489,7 @@ export type Database = {
           last_daily_reset?: string | null
           last_diary_pdf_export_at?: string | null
           last_diary_pdf_export_url?: string | null
-          last_smer_pdf_export_at?: string | null
-          last_smer_pdf_export_url?: string | null
+          name_to_jiva_consent_at?: string | null
           offer_accepted_at?: string | null
           offer_version?: string | null
           onboarding_completed?: boolean | null
@@ -1418,6 +1500,8 @@ export type Database = {
           privacy_version?: string | null
           role?: string | null
           soft_banned_features?: string[] | null
+          special_category_consent_at?: string | null
+          special_category_consent_withdrawn_at?: string | null
           temp_bans_count?: number | null
           timezone?: string | null
           trial_ended_at?: string | null
@@ -1493,42 +1577,54 @@ export type Database = {
         }
         Relationships: []
       }
-      smer_entries: {
+      security_incidents: {
         Row: {
-          alternative_reaction: string | null
+          affected_users_count: number
           created_at: string
-          emotions: string[] | null
-          entry_date: string
+          created_by: string | null
+          description: string | null
+          discovered_at: string
           id: string
-          reactions: string | null
-          situation: string | null
-          thoughts: string | null
-          updated_at: string | null
-          user_id: string
+          incident_type: string
+          resolution_notes: string | null
+          rkn_notified_at: string | null
+          rkn_reference: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
         }
         Insert: {
-          alternative_reaction?: string | null
+          affected_users_count?: number
           created_at?: string
-          emotions?: string[] | null
-          entry_date?: string
+          created_by?: string | null
+          description?: string | null
+          discovered_at?: string
           id?: string
-          reactions?: string | null
-          situation?: string | null
-          thoughts?: string | null
-          updated_at?: string | null
-          user_id: string
+          incident_type: string
+          resolution_notes?: string | null
+          rkn_notified_at?: string | null
+          rkn_reference?: string | null
+          severity: string
+          status?: string
+          title: string
+          updated_at?: string
         }
         Update: {
-          alternative_reaction?: string | null
+          affected_users_count?: number
           created_at?: string
-          emotions?: string[] | null
-          entry_date?: string
+          created_by?: string | null
+          description?: string | null
+          discovered_at?: string
           id?: string
-          reactions?: string | null
-          situation?: string | null
-          thoughts?: string | null
-          updated_at?: string | null
-          user_id?: string
+          incident_type?: string
+          resolution_notes?: string | null
+          rkn_notified_at?: string | null
+          rkn_reference?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1568,8 +1664,8 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          edited_at: string | null
           id: string
-          is_anonymous: boolean | null
           reply_to_id: string | null
           story_id: string
           user_id: string
@@ -1577,8 +1673,8 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          edited_at?: string | null
           id?: string
-          is_anonymous?: boolean | null
           reply_to_id?: string | null
           story_id: string
           user_id: string
@@ -1586,8 +1682,8 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          edited_at?: string | null
           id?: string
-          is_anonymous?: boolean | null
           reply_to_id?: string | null
           story_id?: string
           user_id?: string
@@ -1645,47 +1741,59 @@ export type Database = {
         Row: {
           auto_renew: boolean | null
           billing_interval: string | null
-          cancelled_at: string | null
+          canceled_at: string | null
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
           external_id: string | null
+          failed_charge_count: number
           id: string
+          last_charge_attempt_at: string | null
           payment_provider: string | null
           plan: string
+          price_rub: number | null
           status: string | null
           updated_at: string
           user_id: string
+          yookassa_payment_method_id: string | null
         }
         Insert: {
           auto_renew?: boolean | null
           billing_interval?: string | null
-          cancelled_at?: string | null
+          canceled_at?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           external_id?: string | null
+          failed_charge_count?: number
           id?: string
+          last_charge_attempt_at?: string | null
           payment_provider?: string | null
           plan?: string
+          price_rub?: number | null
           status?: string | null
           updated_at?: string
           user_id: string
+          yookassa_payment_method_id?: string | null
         }
         Update: {
           auto_renew?: boolean | null
           billing_interval?: string | null
-          cancelled_at?: string | null
+          canceled_at?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           external_id?: string | null
+          failed_charge_count?: number
           id?: string
+          last_charge_attempt_at?: string | null
           payment_provider?: string | null
           plan?: string
+          price_rub?: number | null
           status?: string | null
           updated_at?: string
           user_id?: string
+          yookassa_payment_method_id?: string | null
         }
         Relationships: []
       }
@@ -2106,48 +2214,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_reports: {
-        Row: {
-          created_at: string | null
-          details: string | null
-          id: string
-          reason: string
-          reported_user_id: string
-          reporter_id: string
-          resolution_notes: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          details?: string | null
-          id?: string
-          reason: string
-          reported_user_id: string
-          reporter_id: string
-          resolution_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          details?: string | null
-          id?: string
-          reason?: string
-          reported_user_id?: string
-          reporter_id?: string
-          resolution_notes?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           created_at: string
@@ -2175,7 +2241,6 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
-          is_anonymous: boolean | null
           is_hidden: boolean | null
           last_comment_at: string | null
           title: string | null
@@ -2187,7 +2252,6 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
-          is_anonymous?: boolean | null
           is_hidden?: boolean | null
           last_comment_at?: string | null
           title?: string | null
@@ -2199,7 +2263,6 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
-          is_anonymous?: boolean | null
           is_hidden?: boolean | null
           last_comment_at?: string | null
           title?: string | null
@@ -2359,12 +2422,71 @@ export type Database = {
         }
         Returns: Json
       }
+      count_admins: { Args: never; Returns: number }
+      create_user_story: {
+        Args: { p_content: string; p_title?: string }
+        Returns: string
+      }
+      decrement_feature_usage: {
+        Args: { p_feature: string; p_usage_date: string; p_user_id: string }
+        Returns: undefined
+      }
       extend_all_premium_subscriptions: {
         Args: { hours_to_add: number }
         Returns: number
       }
+      get_conversations_with_last_message: {
+        Args: { p_user_id: string }
+        Returns: {
+          conv_created_at: string
+          conv_updated_at: string
+          conversation_id: string
+          last_content: string
+          last_created_at: string
+          last_media_url: string
+          last_sender_id: string
+          status: string
+          unread_count: number
+          user_id_1: string
+          user_id_2: string
+        }[]
+      }
       get_date_immutable: { Args: { ts: string }; Returns: string }
+      get_feed_with_meta: {
+        Args: { p_cursor?: string; p_limit?: number; p_viewer_id?: string }
+        Returns: {
+          author_avatar_url: string
+          author_display_name: string
+          comment_count: number
+          content: string
+          created_at: string
+          emotion: string
+          emotion_wave: string
+          heart_count: number
+          id: string
+          moderation_status: string
+          updated_at: string
+          user_id: string
+          viewer_reacted: boolean
+        }[]
+      }
       get_premium_user_ids: { Args: { user_ids: string[] }; Returns: string[] }
+      get_table_columns: {
+        Args: { p_table: string }
+        Returns: {
+          column_name: string
+          data_type: string
+          is_nullable: boolean
+        }[]
+      }
+      get_user_activity_counts: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          ai_messages_count: number
+          posts_count: number
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2380,6 +2502,19 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      increment_jiva_reply_usage: {
+        Args: {
+          p_feature: string
+          p_limit: number
+          p_usage_date: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      increment_navigator_practice: {
+        Args: { p_item_id: string; p_item_type: string }
+        Returns: number
       }
       is_admin: { Args: never; Returns: boolean }
       is_moderator_or_admin: { Args: never; Returns: boolean }
@@ -2407,6 +2542,15 @@ export type Database = {
           p_reply_to_id?: string
         }
         Returns: string
+      }
+      start_or_increment_jiva_trial: {
+        Args: {
+          p_limit: number
+          p_post_id: string
+          p_usage_date: string
+          p_user_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {

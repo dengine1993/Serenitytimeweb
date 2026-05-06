@@ -4,6 +4,7 @@ import { Crown, Sparkles, MessageCircle, Brain, X, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/hooks/useI18n';
+import { JIVA_CHAT_LIMITS } from '@/config/jivaLimits';
 
 interface ArtQuotaExhaustedCardProps {
   imageData: string;
@@ -19,7 +20,7 @@ const benefits = [
   {
     icon: MessageCircle,
     title: 'Jiva 24/7',
-    description: '10 сообщений без ограничений',
+    description: `${JIVA_CHAT_LIMITS.premiumDailyLimit} глубоких сообщений в день`,
   },
   {
     icon: Brain,
@@ -60,15 +61,15 @@ export function ArtQuotaExhaustedCard({ imageData, onClose }: ArtQuotaExhaustedC
           </button>
 
           {/* Decorative glow */}
-          <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#20B2AA]/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#F97316]/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-rose-500/15 rounded-full blur-3xl pointer-events-none" />
           
           {/* Drawing thumbnail */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="w-24 h-24 mx-auto mb-5 rounded-2xl overflow-hidden ring-2 ring-[#20B2AA]/30 shadow-lg relative"
+            className="w-24 h-24 mx-auto mb-5 rounded-2xl overflow-hidden ring-2 ring-[#F97316]/30 shadow-lg relative"
           >
             <img
               src={imageData}
@@ -111,11 +112,11 @@ export function ArtQuotaExhaustedCard({ imageData, onClose }: ArtQuotaExhaustedC
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-gradient-to-br from-[#20B2AA]/10 to-purple-500/5 rounded-2xl p-4 mb-5 border border-[#20B2AA]/20"
+            className="bg-gradient-to-br from-[#F97316]/10 to-rose-500/8 rounded-2xl p-4 mb-5 border border-[#F97316]/20"
           >
             <div className="flex items-center gap-2 mb-3">
-              <Crown className="w-4 h-4 text-[#20B2AA]" />
-              <span className="text-sm font-medium text-foreground">Опора — от 690₽/мес</span>
+              <Crown className="w-4 h-4 text-[#F97316]" />
+              <span className="text-sm font-medium text-foreground">Premium — от 690₽/мес</span>
             </div>
             
             <div className="space-y-2.5">
@@ -127,8 +128,8 @@ export function ArtQuotaExhaustedCard({ imageData, onClose }: ArtQuotaExhaustedC
                   transition={{ delay: 0.35 + index * 0.1 }}
                   className="flex items-start gap-2.5"
                 >
-                  <div className="w-6 h-6 rounded-full bg-[#20B2AA]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <benefit.icon className="w-3.5 h-3.5 text-[#20B2AA]" />
+                  <div className="w-6 h-6 rounded-full bg-[#F97316]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <benefit.icon className="w-3.5 h-3.5 text-[#F97316]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">{benefit.title}</p>
@@ -157,7 +158,7 @@ export function ArtQuotaExhaustedCard({ imageData, onClose }: ArtQuotaExhaustedC
             >
               <Button
                 onClick={handleContinue}
-                className="w-full rounded-full bg-[#20B2AA] hover:bg-[#1a9a94] text-white h-12 font-medium"
+                className="w-full rounded-full bg-[#F97316] hover:bg-[#EA580C] text-white h-12 font-medium"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
                 Раскрыть смысл рисунка

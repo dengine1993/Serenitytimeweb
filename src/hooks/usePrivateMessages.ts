@@ -11,6 +11,7 @@ export interface PrivateMessage {
   media_type?: string | null;
   read_at?: string | null;
   created_at: string;
+  edited_at?: string | null;
 }
 
 export function usePrivateMessages(conversationId: string | null) {
@@ -27,14 +28,13 @@ export function usePrivateMessages(conversationId: string | null) {
       return;
     }
 
-    // @ts-ignore
     const { data } = await supabase
       .from('private_messages')
       .select('*')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true });
 
-    setMessages(data || []);
+    setMessages((data as PrivateMessage[]) || []);
     setIsLoading(false);
   }, [conversationId]);
 
@@ -42,7 +42,6 @@ export function usePrivateMessages(conversationId: string | null) {
     if (conversationId) {
       loadMessages();
 
-      // Single combined channel for messages and presence
       const channel = supabase
         .channel(`private-chat-${conversationId}`)
         .on('postgres_changes', {
@@ -61,11 +60,19 @@ export function usePrivateMessages(conversationId: string | null) {
           filter: `conversation_id=eq.${conversationId}`
         }, (payload) => {
           const updatedMsg = payload.new as PrivateMessage;
-          setMessages(prev => prev.map(m => 
+          setMessages(prev => prev.map(m =>
             m.id === updatedMsg.id ? updatedMsg : m
           ));
         })
-        // Presence for typing indicator - combined in same channel
+        .on('postgres_changes', {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'private_messages',
+          filter: `conversation_id=eq.${conversationId}`
+        }, (payload) => {
+          const oldMsg = payload.old as { id: string };
+          setMessages(prev => prev.filter(m => m.id !== oldMsg.id));
+        })
         .on('presence', { event: 'sync' }, () => {
           const state = channel.presenceState();
           const others = Object.values(state).flat().filter(
@@ -75,9 +82,9 @@ export function usePrivateMessages(conversationId: string | null) {
         })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED' && user) {
-            await channel.track({ 
-              user_id: user.id, 
-              is_typing: false 
+            await channel.track({
+              user_id: user.id,
+              is_typing: false
             });
           }
         });
@@ -90,12 +97,15 @@ export function usePrivateMessages(conversationId: string | null) {
     }
   }, [conversationId, user, loadMessages]);
 
-  const sendMessage = async (content: string, mediaUrl?: string, mediaType?: string) => {
+  const sendMessage = async (
+    content: string,
+    mediaUrl?: string,
+    mediaType?: string,
+  ) => {
     if (!user || !conversationId || (!content.trim() && !mediaUrl)) return;
 
     stopTyping();
 
-    // @ts-ignore
     const { error, data } = await supabase
       .from('private_messages')
       .insert({
@@ -103,13 +113,31 @@ export function usePrivateMessages(conversationId: string | null) {
         sender_id: user.id,
         content: content.trim(),
         media_url: mediaUrl || null,
-        media_type: mediaType || null
+        media_type: mediaType || null,
       })
       .select()
       .single();
 
+    // Fire-and-forget push notification to recipient
     if (!error && data) {
-      // Optimistic update already handled by realtime
+      try {
+        const { data: conv } = await supabase
+          .from('private_conversations')
+          .select('user_id_1, user_id_2')
+          .eq('id', conversationId)
+          .maybeSingle();
+        const recipient = conv && (conv.user_id_1 === user.id ? conv.user_id_2 : conv.user_id_1);
+        if (recipient) {
+          supabase.functions.invoke('notify-event', {
+            body: {
+              type: 'dm',
+              recipient_id: recipient,
+              preview: content.trim() || (mediaUrl ? '📎 Вложение' : ''),
+              conversation_id: conversationId,
+            },
+          }).catch(() => undefined);
+        }
+      } catch { /* ignore */ }
     }
 
     return { error, data };
@@ -118,7 +146,6 @@ export function usePrivateMessages(conversationId: string | null) {
   const markAsRead = async (messageId: string) => {
     if (!user) return;
 
-    // @ts-ignore
     await supabase
       .from('private_messages')
       .update({ read_at: new Date().toISOString() })
@@ -130,7 +157,6 @@ export function usePrivateMessages(conversationId: string | null) {
   const markAllAsRead = async () => {
     if (!user || !conversationId) return;
 
-    // @ts-ignore
     await supabase
       .from('private_messages')
       .update({ read_at: new Date().toISOString() })
@@ -142,11 +168,11 @@ export function usePrivateMessages(conversationId: string | null) {
   const startTyping = useCallback(() => {
     if (channelRef.current && user) {
       channelRef.current.track({ user_id: user.id, is_typing: true });
-      
+
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      
+
       typingTimeoutRef.current = setTimeout(() => {
         stopTyping();
       }, 3000);
@@ -162,11 +188,39 @@ export function usePrivateMessages(conversationId: string | null) {
     }
   }, [user]);
 
+  const editMessage = async (messageId: string, newContent: string) => {
+    if (!user) return { error: 'Not authenticated' };
+    const trimmed = newContent.trim();
+    if (!trimmed) return { error: 'Empty' };
+    const { error } = await supabase
+      .from('private_messages')
+      .update({ content: trimmed })
+      .eq('id', messageId)
+      .eq('sender_id', user.id);
+    if (error) return { error: error.message };
+    setMessages(prev => prev.map(m => m.id === messageId ? { ...m, content: trimmed, edited_at: new Date().toISOString() } : m));
+    return { error: null };
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!user) return { error: 'Not authenticated' };
+    const { error } = await supabase
+      .from('private_messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('sender_id', user.id);
+    if (error) return { error: error.message };
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    return { error: null };
+  };
+
   return {
     messages,
     isLoading,
     otherUserTyping,
     sendMessage,
+    editMessage,
+    deleteMessage,
     markAsRead,
     markAllAsRead,
     startTyping,

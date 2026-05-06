@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CommunityRulesModal } from '@/components/community/CommunityRulesModal';
 import { CommunityHeader } from '@/components/community/CommunityHeader';
 import { CommunityMessage, DateSeparator } from '@/components/community/CommunityMessage';
@@ -51,7 +51,14 @@ export default function Community() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<'community' | 'private' | 'stories'>('community');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as 'community' | 'private' | 'stories') || 'community';
+  const [activeTab, setActiveTab] = useState<'community' | 'private' | 'stories'>(
+    initialTab === 'private' || initialTab === 'stories' ? initialTab : 'community'
+  );
+  const initialStorySort = searchParams.get('filter') === 'mine' ? 'mine' : undefined;
+  const initialOpenStoryId = searchParams.get('storyId') || undefined;
+  const initialOpenCreate = searchParams.get('new') === '1';
   const [pendingConversationId, setPendingConversationId] = useState<string | null>(null);
   const [rulesAccepted, setRulesAccepted] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -271,19 +278,22 @@ export default function Community() {
     };
   }, [rulesAccepted, user, loadMessages]);
 
-  // Scroll to bottom on new messages (only for new messages, not when loading old ones)
+  // Scroll to bottom only if user is near bottom or it's their own new message
   const prevMessagesLength = useRef(messages.length);
   useEffect(() => {
     if (messages.length > prevMessagesLength.current) {
-      // Only scroll if new messages were added at the end
       const lastMessage = messages[messages.length - 1];
-      const prevLastMessage = messages[prevMessagesLength.current - 1];
-      if (!prevLastMessage || new Date(lastMessage.created_at) > new Date(prevLastMessage.created_at)) {
+      const container = messagesContainerRef.current;
+      const isOwnMessage = lastMessage?.user_id === user?.id;
+      const isNearBottom = container
+        ? container.scrollHeight - container.scrollTop - container.clientHeight < 200
+        : true;
+      if (isOwnMessage || isNearBottom) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
     prevMessagesLength.current = messages.length;
-  }, [messages]);
+  }, [messages, user?.id]);
 
   const acceptRules = async () => {
     if (!user) {
@@ -313,13 +323,13 @@ export default function Community() {
 
       if (error) {
         if (error.message.includes('Rate limit')) {
-          toast.error('Подождите пару секунд перед отправкой');
+          toast.error(t('community.page.errors.rateLimit'));
         } else if (error.message.includes('too long')) {
-          toast.error('Сообщение слишком длинное (макс. 2000 символов)');
+          toast.error(t('community.page.errors.tooLong'));
         } else if (error.message.includes('cannot be empty')) {
-          toast.error('Сообщение не может быть пустым');
+          toast.error(t('community.page.errors.empty'));
         } else {
-          toast.error('Не удалось отправить сообщение');
+          toast.error(t('community.page.errors.sendFailed'));
           console.error('Send message error:', error);
         }
         return;
@@ -332,9 +342,9 @@ export default function Community() {
           .select('display_name')
           .eq('user_id', user.id)
           .maybeSingle();
-        
-        const senderName = profile?.display_name || 'Пользователь';
-        
+
+        const senderName = profile?.display_name || t('community.profile.anonymous');
+
         // Call notify-mention edge function
         supabase.functions.invoke('notify-mention', {
           body: {
@@ -344,10 +354,10 @@ export default function Community() {
           }
         }).catch(err => console.error('Failed to send mention notifications:', err));
       }
-      
+
       setReplyTo(null);
     } catch (err) {
-      toast.error('Ошибка при отправке сообщения');
+      toast.error(t('community.page.errors.sendGeneric'));
       console.error('Send message error:', err);
     }
   };
@@ -374,7 +384,7 @@ export default function Community() {
 
     // Admin can delete any message, regular user can only delete own
     if (targetMessage.user_id !== user.id && !isAdmin) {
-      toast.error('Нет прав для удаления этого сообщения');
+      toast.error(t('community.page.errors.noPermissionDelete'));
       return;
     }
 
@@ -384,10 +394,10 @@ export default function Community() {
       .eq('id', id);
 
     if (error) {
-      toast.error('Не удалось удалить сообщение');
+      toast.error(t('community.page.errors.deleteFailed'));
       return;
     }
-    
+
     setMessages(prev => prev.filter(msg => msg.id !== id));
   };
 
@@ -402,11 +412,11 @@ export default function Community() {
       });
 
     if (error) {
-      toast.error('Не удалось закрепить сообщение');
+      toast.error(t('community.page.errors.pinFailed'));
       return;
     }
 
-    toast.success('Сообщение закреплено');
+    toast.success(t('community.page.success.pinned'));
   };
 
   const unpinMessage = async (messageId: string) => {
@@ -418,11 +428,11 @@ export default function Community() {
       .eq('message_id', messageId);
 
     if (error) {
-      toast.error('Не удалось открепить сообщение');
+      toast.error(t('community.page.errors.unpinFailed'));
       return;
     }
 
-    toast.success('Сообщение откреплено');
+    toast.success(t('community.page.success.unpinned'));
   };
 
   const scrollToMessage = (messageId: string) => {
@@ -437,24 +447,24 @@ export default function Community() {
   // Handler to start private chat from message context menu
   const handleStartChat = async (userId: string) => {
     if (!user) {
-      toast.error('Войдите, чтобы написать в личку');
+      toast.error(t('community.page.errors.loginRequired'));
       return;
     }
-    
+
     const result = await startConversation(userId);
-    
+
     if (result.error) {
       toast.error(result.error);
       return;
     }
-    
+
     if (result.needsFriend) {
-      toast.info('Добавьте пользователя в друзья, чтобы написать');
+      toast.info(t('community.page.errors.addFriendFirst'));
       return;
     }
-    
+
     if (result.blocked) {
-      toast.info('Этот пользователь ограничил приём личных сообщений', { icon: '🔒' });
+      toast.info(t('community.page.errors.userRestricted'), { icon: '🔒' });
       return;
     }
     
@@ -524,22 +534,57 @@ export default function Community() {
   };
 
   if (isLoading) {
+    const isStoriesTab = activeTab === 'stories';
+    const isPrivateTab = activeTab === 'private';
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-sky-50/50 via-blue-50/30 to-pink-50/30 dark:from-background dark:via-background dark:to-background">
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-amber-50/40 via-orange-50/20 to-background dark:from-background dark:via-background dark:to-background">
         <div className="p-4 border-b border-border/30">
           <Skeleton className="h-10 w-48" />
         </div>
-        <div className="flex-1 p-4 space-y-4">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className={`flex items-end gap-2 ${i % 2 === 0 ? 'justify-end' : ''}`}>
-              {i % 2 !== 0 && <Skeleton className="h-9 w-9 rounded-full shrink-0" />}
-              <div className="space-y-1">
-                {i % 2 !== 0 && <Skeleton className="h-3 w-20" />}
-                <Skeleton className={`h-16 rounded-2xl ${i % 2 === 0 ? 'w-48' : 'w-56'}`} />
+        <div className="flex-1 p-4 space-y-3">
+          {isStoriesTab ? (
+            // Story-card skeletons
+            [1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-card rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <Skeleton className="h-16 w-full" />
+                <div className="flex gap-3">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
               </div>
-              {i % 2 === 0 && <Skeleton className="h-9 w-9 rounded-full shrink-0" />}
-            </div>
-          ))}
+            ))
+          ) : isPrivateTab ? (
+            // Conversation list skeletons
+            [1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="flex items-center gap-3 p-2">
+                <Skeleton className="h-12 w-12 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <Skeleton className="h-3 w-10" />
+              </div>
+            ))
+          ) : (
+            // Chat bubbles
+            [1, 2, 3, 4, 5].map(i => (
+              <div key={i} className={`flex items-end gap-2 ${i % 2 === 0 ? 'justify-end' : ''}`}>
+                {i % 2 !== 0 && <Skeleton className="h-9 w-9 rounded-full shrink-0" />}
+                <div className="space-y-1">
+                  {i % 2 !== 0 && <Skeleton className="h-3 w-20" />}
+                  <Skeleton className={`h-16 rounded-2xl ${i % 2 === 0 ? 'w-48' : 'w-56'}`} />
+                </div>
+                {i % 2 === 0 && <Skeleton className="h-9 w-9 rounded-full shrink-0" />}
+              </div>
+            ))
+          )}
         </div>
         <BottomDock />
       </div>
@@ -549,7 +594,7 @@ export default function Community() {
   if (!rulesAccepted) {
     return (
       <>
-        <SEO title="Сообщество — Безмятежные" description="Общайся с понимающими людьми в спокойном чате" />
+        <SEO title={t('community.page.seoTitle')} description={t('community.page.seoDescription')} />
         <CommunityRulesModal onAccept={acceptRules} isLoggedIn={!!user} />
       </>
     );
@@ -557,13 +602,15 @@ export default function Community() {
 
   return (
     <>
-      <SEO title="Сообщество — Безмятежные" description="Общайся с понимающими людьми в спокойном чате" />
+      <SEO title={t('community.page.seoTitle')} description={t('community.page.seoDescription')} />
       
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-sky-50/50 via-blue-50/30 to-pink-50/30 dark:from-background dark:via-background dark:to-background">
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-amber-50/40 via-orange-50/20 to-background dark:from-background dark:via-background dark:to-background">
         <CommunityHeader 
-          onlineCount={Math.max(onlineCount, 1)} 
+          onlineCount={onlineCount} 
           searchQuery={activeTab === 'community' ? searchQuery : ''}
           onSearchChange={setSearchQuery}
+          showSearch={activeTab === 'community'}
+          showOnline={activeTab === 'community'}
         />
         
         {/* Offline indicator */}
@@ -571,7 +618,7 @@ export default function Community() {
           <div className="bg-destructive/10 text-destructive text-sm px-4 py-2 text-center border-b border-destructive/20">
             <span className="inline-flex items-center gap-2">
               <WifiOff className="h-4 w-4" />
-              Нет подключения к интернету
+              {t('community.page.offline')}
             </span>
           </div>
         )}
@@ -620,7 +667,11 @@ export default function Community() {
         {activeTab === 'stories' ? (
           <>
             <div className="flex-1 min-h-0 overflow-hidden">
-              <StoriesTab />
+              <StoriesTab
+                initialSortBy={initialStorySort}
+                initialOpenStoryId={initialOpenStoryId}
+                initialOpenCreate={initialOpenCreate}
+              />
             </div>
             <BottomDock />
           </>
@@ -662,7 +713,7 @@ export default function Community() {
                 ) : (
                   <ChevronUp className="h-4 w-4 mr-2" />
                 )}
-                Загрузить ранние сообщения
+                {t('community.page.loadEarlier')}
               </Button>
             </div>
           )}
@@ -709,8 +760,8 @@ export default function Community() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="text-4xl mb-4">🌿</div>
               <p className="text-muted-foreground">
-                Будь первым, кто напишет!<br />
-                Поделись добрым словом 💚
+                {t('community.page.emptyTitle')}<br />
+                {t('community.page.emptySubtitle')}
               </p>
             </div>
           )}
@@ -719,7 +770,7 @@ export default function Community() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="text-4xl mb-4">🔍</div>
               <p className="text-muted-foreground">
-                Ничего не найдено по запросу<br />
+                {t('community.page.noResults')}<br />
                 "{searchQuery}"
               </p>
             </div>
@@ -761,11 +812,11 @@ export default function Community() {
             <ShieldAlert className="h-5 w-5 text-amber-500 flex-shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                Функции сообщества временно ограничены
+                {t('community.page.restricted')}
               </p>
               {remainingTime && (
                 <p className="text-xs text-amber-500/70">
-                  Осталось: {remainingTime}
+                  {t('community.page.remaining', { time: remainingTime })}
                 </p>
               )}
             </div>

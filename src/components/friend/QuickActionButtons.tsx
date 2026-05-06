@@ -1,4 +1,4 @@
-import { Wind, Compass, Music, AlertTriangle } from "lucide-react";
+import { Wind, Compass, Music } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -31,13 +31,6 @@ export function QuickActionButtons({ onBreathing, onGrounding }: QuickActionButt
       icon: Music,
       color: "from-violet-500/20 to-purple-500/20 border-violet-500/30 text-violet-300",
       onClick: () => navigate("/techniques"),
-    },
-    {
-      id: "crisis",
-      label: "Кризис?",
-      icon: AlertTriangle,
-      color: "from-rose-500/20 to-red-500/20 border-rose-500/30 text-rose-300",
-      onClick: () => navigate("/crisis"),
     },
   ];
 

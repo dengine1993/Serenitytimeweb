@@ -46,7 +46,7 @@ export const StepIdentity = ({ onNext }: StepIdentityProps) => {
                     autoFocus
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Твое имя..."
+                    placeholder="Твоё имя..."
                     className="text-center text-2xl h-16 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-violet-500/50 focus:ring-violet-500/20 rounded-2xl"
                 />
 

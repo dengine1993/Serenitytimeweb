@@ -282,8 +282,8 @@ export default function AdminPayments() {
                     <TableHead>План</TableHead>
                     <TableHead>Статус</TableHead>
                     <TableHead>Период</TableHead>
-                    <TableHead>Auto-renew</TableHead>
-                    <TableHead>Provider</TableHead>
+                    <TableHead>Автопродление</TableHead>
+                    <TableHead>Провайдер</TableHead>
                     <TableHead className="text-right">Действия</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -357,8 +357,8 @@ export default function AdminPayments() {
                     <TableHead>Сумма</TableHead>
                     <TableHead>Статус</TableHead>
                     <TableHead>Продукт</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>External ID</TableHead>
+                    <TableHead>Провайдер</TableHead>
+                    <TableHead>Внешний ID</TableHead>
                     <TableHead className="text-right">Действия</TableHead>
                   </TableRow>
                 </TableHeader>

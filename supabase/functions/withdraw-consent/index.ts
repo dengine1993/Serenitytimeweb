@@ -67,7 +67,7 @@ serve(async (req) => {
       'ai_messages',
       'ai_chats',
       'mood_entries',
-      'smer_entries',
+      
       'emotion_calendar',
       'daily_checkins',
       'art_therapy_sessions',

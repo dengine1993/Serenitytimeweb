@@ -83,60 +83,69 @@ export default function AdminLogs() {
   const [llmLogs, setLLMUsageLogs] = useState<LLMUsageLog[]>([]);
   const [consentLogs, setConsentLogs] = useState<ConsentLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
-    loadLogs();
+    setCursor(null);
+    setHasMore(false);
+    loadLogs(false);
   }, [activeTab]);
 
-  const loadLogs = async () => {
-    setLoading(true);
+  const fetchLogs = async (type: LogType, before?: string | null) => {
+    const { data, error } = await supabase.functions.invoke("admin-logs", {
+      body: {
+        type,
+        limit: 50,
+        before_created_at: before || undefined,
+        action_filter: type === "admin" && actionFilter !== "all" ? actionFilter : undefined,
+      },
+    });
+    if (error) throw error;
+    return {
+      logs: (data?.logs || []) as any[],
+      nextCursor: (data?.nextCursor as string | null) ?? null,
+      hasMore: !!data?.hasMore,
+    };
+  };
+
+  const loadLogs = async (append: boolean) => {
+    append ? setLoadingMore(true) : setLoading(true);
     try {
-      switch (activeTab) {
-        case "admin":
-          await loadAdminLogs();
-          break;
-        case "moderation":
-          await loadModerationLogs();
-          break;
-        case "llm":
-          await loadLLMUsageLogs();
-          break;
-        case "consent":
-          await loadConsentLogs();
-          break;
-      }
+      const before = append ? cursor : null;
+      const res = await fetchLogs(activeTab, before);
+      const setMap = {
+        admin: setAdminLogs,
+        moderation: setModerationLogs,
+        llm: setLLMUsageLogs,
+        consent: setConsentLogs,
+      } as const;
+      const setFn = setMap[activeTab] as (v: any[]) => void;
+      const currentMap = {
+        admin: adminLogs,
+        moderation: moderationLogs,
+        llm: llmLogs,
+        consent: consentLogs,
+      } as const;
+      setFn(append ? [...(currentMap[activeTab] as any[]), ...res.logs] : res.logs);
+      setCursor(res.nextCursor);
+      setHasMore(res.hasMore);
     } catch (error) {
       console.error("Error loading logs:", error);
       toast.error("Ошибка загрузки логов");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const fetchLogs = async (type: LogType) => {
-    const { data, error } = await supabase.functions.invoke("admin-logs", {
-      body: { type, limit: 200 },
-    });
-    if (error) throw error;
-    return (data?.logs || []) as any[];
-  };
-
-  const loadAdminLogs = async () => {
-    setAdminLogs((await fetchLogs("admin")) as AdminLog[]);
-  };
-
-  const loadModerationLogs = async () => {
-    setModerationLogs((await fetchLogs("moderation")) as ModerationLog[]);
-  };
-
-  const loadLLMUsageLogs = async () => {
-    setLLMUsageLogs((await fetchLogs("llm")) as LLMUsageLog[]);
-  };
-
-  const loadConsentLogs = async () => {
-    setConsentLogs((await fetchLogs("consent")) as ConsentLog[]);
+  const reload = () => {
+    setCursor(null);
+    setHasMore(false);
+    loadLogs(false);
   };
 
   const getActionColor = (action: string) => {
@@ -147,15 +156,17 @@ export default function AdminLogs() {
     return "secondary";
   };
 
+  const matchesSearch = (obj: unknown) =>
+    !searchQuery || JSON.stringify(obj).toLowerCase().includes(searchQuery.toLowerCase());
+
   const filteredAdminLogs = adminLogs.filter((log) => {
-    if (searchQuery && !JSON.stringify(log).toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (actionFilter !== "all" && !log.action.includes(actionFilter)) {
-      return false;
-    }
+    if (!matchesSearch(log)) return false;
+    if (actionFilter !== "all" && !log.action.includes(actionFilter)) return false;
     return true;
   });
+  const filteredModerationLogs = moderationLogs.filter(matchesSearch);
+  const filteredLLMLogs = llmLogs.filter(matchesSearch);
+  const filteredConsentLogs = consentLogs.filter(matchesSearch);
 
   return (
     <AdminLayout
@@ -194,7 +205,7 @@ export default function AdminLogs() {
                 className="pl-9 w-[200px]"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={loadLogs} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={reload} disabled={loading} aria-label="Обновить логи">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
           </div>
@@ -263,6 +274,13 @@ export default function AdminLogs() {
                   )}
                 </div>
               </ScrollArea>
+              {hasMore && activeTab === "admin" && (
+                <div className="mt-4 text-center">
+                  <Button variant="outline" size="sm" onClick={() => loadLogs(true)} disabled={loadingMore}>
+                    {loadingMore ? "Загрузка…" : "Загрузить ещё"}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -273,7 +291,7 @@ export default function AdminLogs() {
               <CardTitle className="flex items-center gap-2">
                 <ScrollText className="h-5 w-5" />
                 История модерации
-                <Badge variant="outline">{moderationLogs.length}</Badge>
+                <Badge variant="outline">{filteredModerationLogs.length}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -281,10 +299,10 @@ export default function AdminLogs() {
                 <div className="space-y-2">
                   {loading ? (
                     <div className="text-center py-8 text-muted-foreground">Загрузка...</div>
-                  ) : moderationLogs.length === 0 ? (
+                  ) : filteredModerationLogs.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">Нет записей</div>
                   ) : (
-                    moderationLogs.map((log) => (
+                    filteredModerationLogs.map((log) => (
                       <div
                         key={log.id}
                         className="flex items-start gap-3 p-3 border rounded-lg hover:bg-muted/50"
@@ -327,7 +345,7 @@ export default function AdminLogs() {
               <CardTitle className="flex items-center gap-2">
                 <Brain className="h-5 w-5" />
                 Использование LLM
-                <Badge variant="outline">{llmLogs.length}</Badge>
+                <Badge variant="outline">{filteredLLMLogs.length}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -335,10 +353,10 @@ export default function AdminLogs() {
                 <div className="space-y-2">
                   {loading ? (
                     <div className="text-center py-8 text-muted-foreground">Загрузка...</div>
-                  ) : llmLogs.length === 0 ? (
+                  ) : filteredLLMLogs.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">Нет записей</div>
                   ) : (
-                    llmLogs.map((log) => (
+                    filteredLLMLogs.map((log) => (
                       <div
                         key={log.id}
                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
@@ -380,7 +398,7 @@ export default function AdminLogs() {
               <CardTitle className="flex items-center gap-2">
                 <FileCheck className="h-5 w-5" />
                 Логи согласий
-                <Badge variant="outline">{consentLogs.length}</Badge>
+                <Badge variant="outline">{filteredConsentLogs.length}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -388,10 +406,10 @@ export default function AdminLogs() {
                 <div className="space-y-2">
                   {loading ? (
                     <div className="text-center py-8 text-muted-foreground">Загрузка...</div>
-                  ) : consentLogs.length === 0 ? (
+                  ) : filteredConsentLogs.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">Нет записей</div>
                   ) : (
-                    consentLogs.map((log) => (
+                    filteredConsentLogs.map((log) => (
                       <div
                         key={log.id}
                         className="flex items-start gap-3 p-3 border rounded-lg hover:bg-muted/50"

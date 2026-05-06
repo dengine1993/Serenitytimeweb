@@ -1,4 +1,5 @@
 // Analytics events for funnel tracking and cost monitoring
+import { isAllowed } from "@/lib/cookieConsent";
 
 export type AnalyticsEvent =
   | 'pwa_installed'
@@ -31,10 +32,29 @@ interface AnalyticsProps {
   [key: string]: string | number | boolean | undefined;
 }
 
+// События, относящиеся к технически-необходимым процессам (оплата, кризис, безопасность),
+// идут всегда — они не «маркетинговая аналитика», а часть исполнения договора.
+const NECESSARY_EVENTS: ReadonlySet<string> = new Set([
+  'payment_success',
+  'checkout_init',
+  'checkout_success',
+  'premium_started',
+  'premium_renewed',
+  'crisis_open',
+  'jiva_call_crisis',
+]);
+
 export function trackEvent(event: AnalyticsEvent, props?: AnalyticsProps) {
   // Log to console in development
   if (import.meta.env.DEV) {
     console.log('[Analytics]', event, props);
+  }
+
+  // Гейтинг по cookie-согласию: если пользователь не разрешил аналитику —
+  // отправляем только технически-необходимые события.
+  const isNecessary = NECESSARY_EVENTS.has(event);
+  if (!isNecessary && !isAllowed('analytics')) {
+    return;
   }
 
   // Send to backend for aggregation
@@ -45,6 +65,7 @@ export function trackEvent(event: AnalyticsEvent, props?: AnalyticsProps) {
   // Could also send to Supabase analytics table
   // or external service like PostHog, Amplitude, etc.
 }
+
 
 export function trackCost(
   userId: string,
